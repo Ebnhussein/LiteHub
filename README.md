@@ -26,6 +26,7 @@ and gigabytes of memory. LiteHub is built the other way around:
 - Downloads go to the folder you choose (global or per account), with a list and a "finished" notice.
 - Settings: theme (system, light, dark), top or left navigation, per-account color/icon/notifications/download folder, start with Windows, global shortcut (default Alt+E), passcode on launch.
 - Close button hides to the tray; running it twice just brings the window back.
+- **Import accounts** (Add account, then "Import from a browser..."): picks up the Google accounts of your Chrome profiles and the services found in the bookmarks of Chrome, Edge, Brave, Vivaldi and Opera, or from an exported bookmarks file; one click adds them all. Read locally only; logins cannot be copied from a browser, so you sign in once per account.
 - **Workspaces:** group accounts (Work, Personal...) and show one group at a time in the side rail.
 - **Unified inbox:** every notification from every account in one list (bell button); click one to open its account. Kept on this PC only, and you can turn that off.
 - **Memory meter:** see what each account uses, put it to sleep with one click, or set a memory limit so the least recently used accounts sleep automatically.

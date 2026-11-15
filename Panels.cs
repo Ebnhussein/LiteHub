@@ -488,7 +488,8 @@ class AddAccountPanel : Panel
         search = Ui.Edit("", 260); search.Location = new Point(Ds.PageX, 84); Ui.Cue(search, "Search services");
         Label hint = Ui.Text("You can add the same service many times\n(two WhatsApps, three Gmails...). Each one has\nits own login and can run at the same time.", 9f, false, true);
         hint.Location = new Point(Ds.PageX, 124);
-        left.Controls.AddRange(new Control[] { t, search, hint });
+        Button imp = Ui.Btn("Import from a browser...", 220, delegate { m.ShowImport(); }); imp.Location = new Point(Ds.PageX, 200);
+        left.Controls.AddRange(new Control[] { t, search, hint, imp });
         cards.Dock = DockStyle.Fill; cards.AutoScroll = true; cards.Padding = new Padding(10, 14, 10, 10); cards.BackColor = Pal.Page;
         cards.FlowDirection = FlowDirection.TopDown; cards.WrapContents = false;
         Controls.Add(cards);

@@ -596,6 +596,14 @@ static class Util
         return ok;
     }
 
+    static bool ImportOk()
+    {
+        string json = "{\"roots\":{\"a\":{\"children\":[{\"id\":\"5\",\"name\":\"\\u0648\\u0627\\u062a\\u0633\",\"type\":\"url\",\"url\":\"https://web.whatsapp.com/\"},{\"name\":\"X\",\"type\":\"folder\"}]}}}";
+        List<KeyValuePair<string, string>> r = BrowserImport.ParseChromium(json);
+        List<KeyValuePair<string, string>> h = BrowserImport.ParseHtml("<DT><A HREF=\"https://app.slack.com/\" ADD_DATE=\"1\">Slack &amp; Co</A>");
+        return r.Count == 1 && r[0].Value == "https://web.whatsapp.com/" && r[0].Key.Length == 4 && h.Count == 1 && h[0].Key == "Slack & Co" && h[0].Value == "https://app.slack.com/";
+    }
+
     static bool PassRoundTrip()
     {
         string salt = Cfg.PassSalt, hash = Cfg.PassHash;
@@ -618,6 +626,6 @@ static class Util
                ParseHotkey("Alt+E", out mod, out key) && mod == 1 && key == Keys.E &&
                ParseHotkey("Ctrl+Shift+F5", out mod, out key) && mod == 6 && key == Keys.F5 &&
                !ParseHotkey("E", out mod, out key) && !ParseHotkey("Alt+Nope", out mod, out key) &&
-               SafeFileName("a/b:c.txt") == "a_b_c.txt" && PassRoundTrip() && DesignOk() && Loc.Ok() && CatalogOk() && IconPickOk();
+               SafeFileName("a/b:c.txt") == "a_b_c.txt" && PassRoundTrip() && DesignOk() && ImportOk() && Loc.Ok() && CatalogOk() && IconPickOk();
     }
 }

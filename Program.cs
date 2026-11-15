@@ -542,6 +542,7 @@ class MainForm : Form
         items.Add(new PaletteItem { Text = Loc.F("Workspace: {0}", Loc.T("All")) }); acts.Add(delegate { SetWorkspace(""); });
         foreach (string w in Workspaces()) { string name = w; items.Add(new PaletteItem { Text = Loc.F("Workspace: {0}", w) }); acts.Add(delegate { SetWorkspace(name); }); }
         items.Add(new PaletteItem { Text = Loc.T("Add account") }); acts.Add(delegate { ShowOverlay(new AddAccountPanel(this), "Add account"); });
+        items.Add(new PaletteItem { Text = Loc.T("Import accounts") }); acts.Add(delegate { ShowImport(); });
         items.Add(new PaletteItem { Text = Loc.T("Settings") }); acts.Add(delegate { ShowSettings("General"); });
         items.Add(new PaletteItem { Text = Loc.T("Downloads") }); acts.Add(delegate { ShowOverlay(new DownloadsPanel(this), "Downloads"); });
         items.Add(new PaletteItem { Text = Loc.T("2 side by side") }); acts.Add(delegate { SetSplit(2); });
@@ -831,7 +832,9 @@ class MainForm : Form
         return n;
     }
 
-    void AddAccount(string n, string url, bool keep, bool ext, int color)
+    void AddAccount(string n, string url, bool keep, bool ext, int color) { AddAccount(n, url, keep, ext, color, true); }
+
+    bool AddAccount(string n, string url, bool keep, bool ext, int color, bool show)
     {
         Uri u;
         string err = null;
@@ -839,7 +842,7 @@ class MainForm : Form
         else if (apps.Exists(delegate(AppDef x) { return x.Name == n; })) err = "An account with this name already exists.";
         else if (!Uri.TryCreate(url, UriKind.Absolute, out u) || (u.Scheme != "http" && u.Scheme != "https"))
             err = "Address must start with http:// or https://";
-        if (err != null) { MessageBox.Show(this, err, "LiteHub"); return; }
+        if (err != null) { if (show) MessageBox.Show(this, err, "LiteHub"); return false; }
         AppDef a = new AppDef();
         a.Name = n; a.Url = url; a.KeepAlive = keep; a.ExternalLinks = ext; a.Id = NewId(n);
         a.Accent = color != 0 ? color : Catalog.ColorFor(url);
@@ -851,7 +854,24 @@ class MainForm : Form
         SetIcon(a, null);
         LayoutIcons();
         SaveApps();
-        ShowApp(a);
+        if (show) ShowApp(a);
+        return true;
+    }
+
+    public void ShowImport() { ShowOverlay(new ImportPanel(this), "Import accounts"); }
+
+    // Add the picked accounts without switching to each one; open the first when done. Returns how many were added.
+    public int ImportAccounts(List<ImportItem> items)
+    {
+        int n = 0; AppDef first = null;
+        foreach (ImportItem it in items)
+        {
+            string name = FreeName(it.Name.Replace("|", " ").Trim());
+            if (name.Length == 0) continue;
+            if (AddAccount(name, it.Url, it.Keep, it.Ext, it.Color, false)) { n++; if (first == null) first = apps[apps.Count - 1]; }
+        }
+        if (first != null) ShowApp(first);
+        return n;
     }
 
     public void RemoveApp(AppDef a)
