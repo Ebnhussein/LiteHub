@@ -857,7 +857,8 @@ class MainForm : Form
             for (int i = 0; i < 6; i++)
             {
                 try { if (Directory.Exists(prof)) Directory.Delete(prof, true); if (File.Exists(icon)) File.Delete(icon); return; }
-                catch (Exception) { await Task.Delay(1500); }
+                catch (Exception) { }
+                await Task.Delay(1500);   // C# 5 cannot await inside catch
             }
         });
     }
