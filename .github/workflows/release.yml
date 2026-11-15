@@ -1,0 +1,21 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build zip, installer and checksums
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File tools\release.ps1
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.exe
+            dist/*.sha256
+          generate_release_notes: true

@@ -70,7 +70,7 @@ static class Setup
         string ver = FileVersionInfo.GetVersionInfo(exe).ProductVersion;
         using (RegistryKey k = Registry.CurrentUser.CreateSubKey(UninstallKey))
         {
-            k.SetValue("DisplayName", App); k.SetValue("DisplayVersion", ver); k.SetValue("Publisher", App);
+            k.SetValue("DisplayName", App); k.SetValue("DisplayVersion", ver); k.SetValue("Publisher", "Ahmed Hussein"); k.SetValue("URLInfoAbout", "https://github.com/Ebnhussein/LiteHub");
             k.SetValue("InstallLocation", dir); k.SetValue("DisplayIcon", exe);
             k.SetValue("UninstallString", "\"" + uninstaller + "\" /uninstall");
             k.SetValue("NoModify", 1, RegistryValueKind.DWord); k.SetValue("NoRepair", 1, RegistryValueKind.DWord);

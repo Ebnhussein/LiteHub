@@ -161,6 +161,8 @@ class MainForm : Form
                 foreach (AppDef a in apps) if (a.KeepAlive && a != first) warmQueue.Enqueue(a);
                 warm.Start();
             }
+            Log.Info("window ready after " + Log.Clock.ElapsedMilliseconds + " ms, " + apps.Count + " accounts");
+            StartWatchdog();
             FetchMissingIcons();
             if (!string.IsNullOrEmpty(Paths.TestData))
             {   // test hooks: LITEHUB_TOAST=1 shows sample cards, LITEHUB_DROP=<file> drops a file on the first account
@@ -455,9 +457,9 @@ class MainForm : Form
                 await a.View.CoreWebView2.CallDevToolsProtocolMethodAsync("Input.dispatchDragEvent", "{\"type\":\"" + type + "\",\"x\":" + x + ",\"y\":" + y + "," + data + "}");
                 await Task.Delay(150);
             }
-            NLog(a.Name + ": dropped " + files.Count + " file(s) into the page");
+            NLog(Log.Who(a) + ": dropped " + files.Count + " file(s) into the page");
         }
-        catch (Exception ex) { NLog(a.Name + ": file drop failed: " + ex.Message); MessageBox.Show(this, Loc.T("Could not drop the files into the page. Open a chat first."), "LiteHub"); }
+        catch (Exception ex) { NLog(Log.Who(a) + ": file drop failed: " + ex.Message); MessageBox.Show(this, Loc.T("Could not drop the files into the page. Open a chat first."), "LiteHub"); }
     }
 
     // Files dropped on the logo: pick the account to send them to.
@@ -1222,17 +1224,8 @@ class MainForm : Form
 
     // ---------- accounts ----------
 
-    // notify.log: what happened to notifications (no message text), to find out why one did not show up.
-    static void NLog(string line)
-    {
-        try
-        {
-            string f = Path.Combine(Paths.Data, "notify.log");
-            if (File.Exists(f) && new FileInfo(f).Length > 100000) File.Delete(f);
-            File.AppendAllText(f, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + line + "\r\n");
-        }
-        catch (Exception) { }
-    }
+    // Notification and unread events go to the main log (account names are replaced by site#number).
+    static void NLog(string line) { Log.Info(line); }
 
     // Locked accounts ask for the passcode once; they lock again after sitting unused (see Sweep).
     bool Unlock(AppDef a)
@@ -1326,7 +1319,7 @@ class MainForm : Form
             c.NotificationReceived += delegate(object s, CoreWebView2NotificationReceivedEventArgs e)
             {   // the system toast still shows; this only keeps a copy for the Inbox
                 string nt = e.Notification.Title, nb = e.Notification.Body;
-                NLog(a.Name + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
+                NLog(Log.Who(a) + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
                 a.LastNotified = DateTime.Now;
                 if (a.Locked) { nt = ""; nb = Loc.T("New message"); }
                 bool ours = Cfg.ToastStyle == 0;
@@ -1341,14 +1334,14 @@ class MainForm : Form
                     bool ok = Cfg.Notify && a.Notify;
                     e.State = ok ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
                     e.SavesInProfile = ok;
-                    NLog(a.Name + ": notification permission asked -> " + (ok ? "allow" : "deny"));
+                    NLog(Log.Who(a) + ": notification permission asked -> " + (ok ? "allow" : "deny"));
                 }
             };
             Uri origin;
             if (Cfg.Notify && a.Notify && Uri.TryCreate(a.Url, UriKind.Absolute, out origin))
             {   // clear an old "denied" decision so the site sees notifications as granted
-                try { await c.Profile.SetPermissionStateAsync(CoreWebView2PermissionKind.Notifications, origin.GetLeftPart(UriPartial.Authority), CoreWebView2PermissionState.Allow); NLog(a.Name + ": notifications set to allowed for " + origin.Host); }
-                catch (Exception ex) { NLog(a.Name + ": could not set permission: " + ex.Message); }
+                try { await c.Profile.SetPermissionStateAsync(CoreWebView2PermissionKind.Notifications, origin.GetLeftPart(UriPartial.Authority), CoreWebView2PermissionState.Allow); NLog(Log.Who(a) + ": notifications set to allowed for " + origin.Host); }
+                catch (Exception ex) { NLog(Log.Who(a) + ": could not set permission: " + ex.Message); }
             }
             c.NewWindowRequested += delegate(object s, CoreWebView2NewWindowRequestedEventArgs e)
             {
@@ -1369,6 +1362,7 @@ class MainForm : Form
             c.DownloadStarting += delegate(object s, CoreWebView2DownloadStartingEventArgs e) { OnDownload(a, e); };
             c.ProcessFailed += delegate(object s, CoreWebView2ProcessFailedEventArgs e)
             {
+                Log.Warn(Log.Who(a) + ": browser process failed: " + e.ProcessFailedKind + " (exit code " + e.ExitCode + ")");
                 bool page = e.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessExited ||
                             e.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessUnresponsive;
                 if (!page || (DateTime.Now - a.LastCrash).TotalSeconds < 20) return;
@@ -1376,13 +1370,16 @@ class MainForm : Form
                 BeginInvoke(new Action(delegate { if (a.View == v) c.Reload(); }));
             };
             c.DocumentTitleChanged += delegate { UpdateBadge(a, c.DocumentTitle); };
+            c.NavigationCompleted += delegate(object s, CoreWebView2NavigationCompletedEventArgs e) { if (!e.IsSuccess) Log.Warn(Log.Who(a) + ": page did not load (" + e.WebErrorStatus + ")"); };
             c.FaviconChanged += delegate { if (a.Icon == null) SetIcon(a, c.FaviconUri); };
             if (a != active) Background(a);
+            Log.Info(Log.Who(a) + ": started");
             c.Navigate(a.Url);
         }
         catch (Exception ex)
         {
             if (a.View != v) return;     // removed or freed meanwhile: nothing to report
+            Log.Error(Log.Who(a) + ": could not start", ex);
             a.View = null;
             host.Controls.Remove(v);
             v.Dispose();
@@ -1494,6 +1491,41 @@ class MainForm : Form
         UpdateTaskbar();
     }
 
+    int sweepN, pong;
+
+    public int LoadedCount { get { return apps.FindAll(delegate(AppDef x) { return x.View != null; }).Count; } }
+
+    async void LogMemory()
+    {
+        try
+        {
+            MemReport r = await Memory();
+            long total = r.Shared; foreach (long v in r.PerApp.Values) total += v;
+            Log.Info("memory: browser processes " + (total >> 20) + " MB, LiteHub " + (System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 >> 20) + " MB, accounts loaded " + LoadedCount + " of " + apps.Count);
+        }
+        catch (Exception) { }
+    }
+
+    // A helper thread asks the window to answer every 2 seconds; if it does not for 6, that is logged (with how long it lasted),
+    // so "LiteHub froze for a while" can be found in the log afterwards.
+    void StartWatchdog()
+    {
+        pong = Environment.TickCount;
+        System.Threading.Thread t = new System.Threading.Thread(delegate()
+        {
+            bool hung = false; int since = 0;
+            while (true)
+            {
+                System.Threading.Thread.Sleep(2000);
+                try { BeginInvoke(new Action(delegate { pong = Environment.TickCount; })); } catch (Exception) { return; }
+                int late = Environment.TickCount - pong;
+                if (late > 6000 && !hung) { hung = true; since = pong; Log.Warn("window not responding for " + late / 1000 + " s"); }
+                else if (late < 3000 && hung) { hung = false; Log.Info("window responsive again after " + (Environment.TickCount - since) / 1000 + " s"); }
+            }
+        });
+        t.IsBackground = true; t.Start();
+    }
+
     AppDef balloonApp;
 
     // The unread count went up. Many web apps notify through a service worker, which WebView2 does not hand to us, so this is the fallback:
@@ -1502,7 +1534,7 @@ class MainForm : Form
     {
         bool looking = a == active && Visible && overlay == null && WindowState != FormWindowState.Minimized && ActiveForm == this;
         bool covered = (DateTime.Now - a.LastNotified).TotalSeconds < 8;
-        NLog(a.Name + ": unread +" + n + " (looking " + looking + ", covered by a notification " + covered + ")");
+        NLog(Log.Who(a) + ": unread +" + n + " (looking " + looking + ", covered by a notification " + covered + ")");
         if (looking || covered) return;
         AddInbox(a, a.Locked ? "" : Loc.T("New messages"), Loc.F("{0} new", n));
         ShowToast(a, a.Locked ? "" : Loc.T("New messages"), a.Locked ? Loc.T("New message") : Loc.F("{0} new", n));
@@ -1525,6 +1557,7 @@ class MainForm : Form
     void Sweep()
     {
         DndText();
+        if (++sweepN % 20 == 0) LogMemory();   // every 10 minutes
         if (Cfg.MemCapMB > 0) EnforceCap();
         foreach (AppDef a in apps)
         {
@@ -1550,6 +1583,7 @@ class MainForm : Form
 
     async void Free(AppDef a)
     {
+        Log.Info(Log.Who(a) + ": freed");
         WebView2 v = a.View;
         a.View = null;
         a.Suspended = false; a.Unlocked = false;
@@ -1615,11 +1649,13 @@ class MainForm : Form
         bool warned = false;
         Application.ThreadException += delegate(object s, System.Threading.ThreadExceptionEventArgs e)
         {
-            try { File.AppendAllText(Path.Combine(Paths.Data, "crash.log"), DateTime.Now + " " + e.Exception + "\r\n\r\n"); } catch (Exception) { }
+            Log.Error("unhandled error in the window", e.Exception);
             if (warned) return;
             warned = true;   // one message per run, details are in the log
-            MessageBox.Show("Something went wrong. LiteHub keeps running.\nDetails: " + Path.Combine(Paths.Data, "crash.log"), "LiteHub");
+            MessageBox.Show(Loc.T("Something went wrong. LiteHub keeps running. The details were saved in the log. You can send them from Settings > About > Report a problem."), "LiteHub");
         };
+        AppDomain.CurrentDomain.UnhandledException += delegate(object s, UnhandledExceptionEventArgs e) { Log.Error("fatal error" + (e.IsTerminating ? " (LiteHub is closing)" : ""), e.ExceptionObject as Exception); };
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += delegate(object s, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e) { Log.Warn("background task error: " + e.Exception.GetBaseException().Message); e.SetObserved(); };
         Application.EnableVisualStyles();
         bool first;
         using (System.Threading.Mutex one = new System.Threading.Mutex(true, "LiteHub.single" + Paths.Tag, out first))
@@ -1631,11 +1667,13 @@ class MainForm : Form
             }
             Directory.CreateDirectory(Paths.Data);
             Cfg.Load(); Loc.Set(Cfg.Lang);
+            Log.Startup();
             Pal.Update();
             bool bg = Array.IndexOf(args, "--background") >= 0;
             if (File.Exists(ResetMarker)) WipeLogins();
             if (Cfg.HasPass && !bg && !Unlock(true)) return;
             Application.Run(new MainForm(bg));
+            Log.Info("LiteHub closed");
         }
     }
 }

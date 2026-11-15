@@ -1,0 +1,19 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: cmd
+        run: build.bat
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $p = Start-Process bin\LiteHub.exe -ArgumentList '--selftest' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw 'selftest failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LiteHub-build
+          path: bin/

@@ -348,7 +348,7 @@ static class Cfg
     public static int ToastStyle;   // 0 = LiteHub card, 1 = Windows notification
     public static int MemCapMB;
     public static bool DndActive { get { return DateTime.Now.Ticks < DndUntil; } }
-    public static string UpdateUrl = "", Workspace = "", Lang = "", Hotkey = "Alt+E", PassSalt = "", PassHash = "", DownloadDir = "";
+    public static string UpdateUrl = Log.UpdateApi, Workspace = "", Lang = "", Hotkey = "Alt+E", PassSalt = "", PassHash = "", DownloadDir = "";
 
     public static void Load()
     {
@@ -381,7 +381,7 @@ static class Cfg
                     case "DndUntil": long.TryParse(v, out DndUntil); break;
                     case "MemCapMB": MemCapMB = Math.Max(0, n); break;
                     case "ToastStyle": ToastStyle = Math.Max(0, Math.Min(1, n)); break;
-                    case "UpdateUrl": UpdateUrl = v.Trim(); break;
+                    case "UpdateUrl": if (v.Trim().Length > 0) UpdateUrl = v.Trim(); break;
                     case "PassSalt": PassSalt = v; break;
                     case "PassHash": PassHash = v; break;
                     case "DownloadDir": DownloadDir = v; break;

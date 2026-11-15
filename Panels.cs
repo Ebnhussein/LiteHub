@@ -432,6 +432,15 @@ class SettingsPanel : Panel
         }
     }
 
+    static void OpenUrl(string url) { try { Process.Start(url); } catch (Exception) { } }
+
+    void ReportProblem()
+    {
+        try { Clipboard.SetText(Log.Diagnostics(m.Apps.Count, m.LoadedCount)); } catch (Exception) { }
+        MessageBox.Show(Loc.T("Diagnostics copied. Paste them into the issue."), "LiteHub");
+        OpenUrl(Log.IssuesUrl);
+    }
+
     async void CheckUpdate(Button b)
     {
         b.Enabled = false;
@@ -471,6 +480,11 @@ class SettingsPanel : Panel
         l.Margin = new Padding(0, 10, 0, 14);
         Add(l);
         Add(Ui.Row(RowWidth, "Check for updates", null, Ui.Btn("Check", 90, delegate(object s, EventArgs e) { CheckUpdate((Button)s); })));
+        Heading("Author and support");
+        Add(Ui.Row(RowWidth, Log.Author, "Source code, questions and bug reports: GitHub Issues", Ui.Btn("Open GitHub", 130, delegate { OpenUrl(Log.RepoUrl); })));
+        Add(Ui.Row(RowWidth, "Report a problem", "Copies the diagnostics (no messages, no passwords) and opens a new issue on GitHub", Ui.Primary(Ui.Btn("Report", 100, delegate { ReportProblem(); }))));
+        Add(Ui.Row(RowWidth, "Open logs folder", "Where LiteHub keeps its log files (no messages or passwords inside)", Ui.Btn("Open", 90, delegate { Directory.CreateDirectory(Log.Dir); OpenUrl(Log.Dir); })));
+        Add(Ui.Row(RowWidth, "Copy diagnostics", "Version, Windows, WebView2 and the last log lines, to paste anywhere", Ui.Btn("Copy", 90, delegate { try { Clipboard.SetText(Log.Diagnostics(m.Apps.Count, m.LoadedCount)); } catch (Exception) { } })));
     }
 }
 

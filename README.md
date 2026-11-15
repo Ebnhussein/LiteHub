@@ -85,6 +85,20 @@ An address like `https://{workspace}.example.com` asks the user for the `{worksp
 
 - Names and logos of other services belong to their owners; LiteHub is not affiliated with them (see THIRD-PARTY-NOTICES.md).
 - Some services block or limit unofficial clients, or need their own desktop app (for example Signal, Viber, Line, and video streaming with DRM).
-- Check that the name "LiteHub" is free for your use before publishing a product under it.
 
-MIT license.
+## Author and support
+
+Made by **Ahmed Hussein** ([@Ebnhussein](https://github.com/Ebnhussein)).
+
+- **Bugs, freezes, questions, ideas:** open an issue at https://github.com/Ebnhussein/LiteHub/issues (there is a bug-report template).
+  The quickest way: in LiteHub go to *Settings > About > Report a problem*. It copies the diagnostics and opens the issue page; paste them in.
+- **Security problems:** please do not open a public issue; email ebnhussein404@gmail.com (see [SECURITY.md](SECURITY.md)).
+
+### Logs and diagnostics
+
+LiteHub keeps a log in `%LOCALAPPDATA%\LiteHub\logs` (10 days, rotated): start-up time, accounts starting and being freed, pages that failed to load,
+browser-process crashes, unhandled errors, "window not responding" periods and a memory line every 10 minutes.
+It never contains message text or passwords, and accounts appear as `site#number`, so a log is safe to attach to an issue.
+*Settings > About* has "Open logs folder" and "Copy diagnostics" (version, Windows build, WebView2 runtime and the last log lines).
+
+MIT license, Copyright (c) 2026 Ahmed Hussein.
