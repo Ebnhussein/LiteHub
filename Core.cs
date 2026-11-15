@@ -376,12 +376,15 @@ static class Cfg
     }
 }
 
-// Colors for light / dark.
+// Surfaces and text for light / dark (brand and status colors are in Ds).
 static class Pal
 {
     public static bool Dark = true;
-    public static readonly Color Brand = Color.FromArgb(91, 84, 232), Brand2 = Color.FromArgb(168, 85, 247);   // LiteHub indigo -> violet
+    public static readonly Color Brand = Ds.Brand, Brand2 = Ds.Brand2;
     public static Color Bar, Page, Card, Text, Sub, Hover, Border;
+
+    // Brand color that is readable as a thin line or small text on the current surfaces (focus rings, unread dots).
+    public static Color BrandInk { get { return Dark ? Color.FromArgb(160, 155, 248) : Brand; } }
 
     public static void Update()
     {
@@ -391,8 +394,13 @@ static class Pal
             try { using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")) dark = k == null || (int)k.GetValue("AppsUseLightTheme", 0) == 0; }
             catch (Exception) { dark = true; }
         }
-        Dark = dark;
+        Set(dark);
         ToolStripManager.Renderer = new ThemeRenderer();
+    }
+
+    public static void Set(bool dark)
+    {
+        Dark = dark;
         if (dark)
         {
             Bar = Color.FromArgb(24, 23, 34); Page = Color.FromArgb(29, 28, 41); Card = Color.FromArgb(41, 40, 58);
@@ -410,7 +418,6 @@ static class Pal
         return Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
     }
 }
-
 // Pure helpers (also covered by --selftest).
 static class Util
 {
@@ -497,6 +504,37 @@ static class Util
                !c.Exists(delegate(KeyValuePair<int, Uri> k) { return k.Value.AbsolutePath == "/a.svg" || k.Value.Host == "127.0.0.1"; });
     }
 
+    // WCAG contrast ratio between two colors (1 to 21).
+    public static double Contrast(Color a, Color b)
+    {
+        double la = Lum(a), lb = Lum(b);
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+    }
+
+    static double Lum(Color c)
+    {
+        double[] v = { c.R / 255.0, c.G / 255.0, c.B / 255.0 };
+        for (int i = 0; i < 3; i++) v[i] = v[i] <= 0.03928 ? v[i] / 12.92 : Math.Pow((v[i] + 0.055) / 1.055, 2.4);
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    }
+
+    // The palette must stay readable in both themes: text 4.5:1, interface lines and large text 3:1.
+    static bool DesignOk()
+    {
+        bool was = Pal.Dark, ok = true;
+        foreach (bool dark in new bool[] { true, false })
+        {
+            Pal.Set(dark);
+            ok = ok && Contrast(Pal.Text, Pal.Page) >= 7 && Contrast(Pal.Text, Pal.Card) >= 7 && Contrast(Pal.Text, Pal.Bar) >= 7 &&
+                 Contrast(Pal.Sub, Pal.Page) >= 4.5 && Contrast(Pal.Sub, Pal.Card) >= 4.5 && Contrast(Pal.Sub, Pal.Bar) >= 4.5 &&
+                 Contrast(Color.White, Ds.Brand) >= 4.5 && Contrast(Color.White, Ds.Danger) >= 4.5 &&
+                 Contrast(Pal.BrandInk, Pal.Page) >= 4.5 && Contrast(Pal.BrandInk, Pal.Card) >= 4.5 &&
+                 Contrast(Color.White, Ds.Brand2) >= 3;
+        }
+        Pal.Set(was);
+        return ok;
+    }
+
     static bool PassRoundTrip()
     {
         string salt = Cfg.PassSalt, hash = Cfg.PassHash;
@@ -519,6 +557,6 @@ static class Util
                ParseHotkey("Alt+E", out mod, out key) && mod == 1 && key == Keys.E &&
                ParseHotkey("Ctrl+Shift+F5", out mod, out key) && mod == 6 && key == Keys.F5 &&
                !ParseHotkey("E", out mod, out key) && !ParseHotkey("Alt+Nope", out mod, out key) &&
-               SafeFileName("a/b:c.txt") == "a_b_c.txt" && PassRoundTrip() && Loc.Ok() && CatalogOk() && IconPickOk();
+               SafeFileName("a/b:c.txt") == "a_b_c.txt" && PassRoundTrip() && DesignOk() && Loc.Ok() && CatalogOk() && IconPickOk();
     }
 }

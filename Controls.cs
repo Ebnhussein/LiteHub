@@ -52,7 +52,7 @@ class AccountIcon : Control
             using (GraphicsPath hp = Rounded(new Rectangle(4, 2, Wide ? Width - 8 : 44, 44), 14))
             using (Brush hb = new SolidBrush(Selected ? Pal.Blend(bg, App.AccentColor, 0.35) : Pal.Hover)) g.FillPath(hb, hp);
         if (Selected) using (Brush pb = new SolidBrush(Pal.Brand)) g.FillRectangle(pb, 0, 13, 3, 22);
-        using (GraphicsPath p = Rounded(r, 11))
+        using (GraphicsPath p = Rounded(r, Ds.RTile))
         {
             if (!App.LetterThumb && App.Icon != null)
             {
@@ -78,7 +78,7 @@ class AccountIcon : Control
         if (App.Running)
         {
             using (Brush ob = new SolidBrush(bg)) g.FillEllipse(ob, r.Right - 9, r.Bottom - 9, 12, 12);
-            using (Brush gb = new SolidBrush(Color.FromArgb(40, 200, 80))) g.FillEllipse(gb, r.Right - 7, r.Bottom - 7, 8, 8);
+            using (Brush gb = new SolidBrush(Ds.Success)) g.FillEllipse(gb, r.Right - 7, r.Bottom - 7, 8, 8);
         }
         if (App.Locked)
         {
@@ -97,7 +97,7 @@ class AccountIcon : Control
                 SizeF sz = g.MeasureString(t, f);
                 float w = Math.Max(16, sz.Width + 4);
                 RectangleF br = Wide ? new RectangleF(Width - w - 12, 17, w, 15) : new RectangleF(Width - w - 1, 0, w, 15);
-                using (Brush rb = new SolidBrush(Color.FromArgb(220, 60, 20))) g.FillEllipse(rb, br);
+                using (Brush rb = new SolidBrush(Ds.Danger)) g.FillEllipse(rb, br);
                 g.DrawString(t, f, Brushes.White, br.X + (w - sz.Width) / 2, 1);
             }
         }
@@ -256,7 +256,7 @@ static class Ui
     {
         TextBox t = new GlassEdit();
         t.Text = text; t.Width = width;
-        t.BackColor = Pal.Hover; t.ForeColor = Pal.Text; t.Font = new Font("Segoe UI", 10f);
+        t.BackColor = Pal.Page; t.ForeColor = Pal.Text; t.Font = new Font("Segoe UI", Ds.Body);   // inputs are recessed: page color inside a card
         return t;
     }
 }
@@ -338,7 +338,7 @@ class RoundButton : Button
 {
     public bool Primary, Bar;   // Bar = brand pill on the left edge (selected menu row)
     public int Badge;           // red count bubble (0 = none)
-    public int Radius = 9;
+    public int Radius = Ds.RControl;
     bool hover, down;
 
     public RoundButton()
@@ -386,10 +386,10 @@ class RoundButton : Button
             if (!clear)
             {
                 g.SetClip(p);
-                using (LinearGradientBrush sh = new LinearGradientBrush(new Rectangle(0, 0, Width, Height), Color.FromArgb(Pal.Dark ? 30 : 70, Color.White), Color.FromArgb(0, Color.White), 90f))
+                using (LinearGradientBrush sh = new LinearGradientBrush(new Rectangle(0, 0, Width, Height), Ds.Sheen, Color.FromArgb(0, Color.White), 90f))
                     g.FillRectangle(sh, 0, 0, Width, Height);
                 g.ResetClip();
-                using (Pen pen = new Pen(Color.FromArgb(Primary ? 70 : Pal.Dark ? 50 : 70, Primary || Pal.Dark ? Color.White : Pal.Brand), 1f)) g.DrawPath(pen, p);
+                using (Pen pen = new Pen(Primary ? Color.FromArgb(70, Color.White) : Ds.Hairline, 1f)) g.DrawPath(pen, p);
             }
         }
         if (Badge > 0)
@@ -399,11 +399,11 @@ class RoundButton : Button
             {
                 SizeF bs = g.MeasureString(bt, bf); float bw = Math.Max(15, bs.Width + 3);
                 RectangleF br = new RectangleF(Width - bw, 0, bw, 14);
-                using (Brush rb = new SolidBrush(Color.FromArgb(220, 60, 20))) g.FillEllipse(rb, br);
+                using (Brush rb = new SolidBrush(Ds.Danger)) g.FillEllipse(rb, br);
                 g.DrawString(bt, bf, Brushes.White, br.X + (bw - bs.Width) / 2, 0.5f);
             }
         }
-        if (Bar) using (Brush pb = new SolidBrush(Pal.Brand)) g.FillRectangle(pb, 0, 9, 3, Height - 18);
+        if (Bar) using (Brush pb = new SolidBrush(Pal.BrandInk)) g.FillRectangle(pb, 0, 9, 3, Height - 18);
         bool left = TextAlign == ContentAlignment.MiddleLeft;
         TextRenderer.DrawText(g, Text, Font, left ? new Rectangle(Padding.Left, 0, Width - Padding.Left, Height) : ClientRectangle, Enabled ? ForeColor : Pal.Blend(Pal.Card, ForeColor, 0.35),
             (left ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter) | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
@@ -413,7 +413,7 @@ class RoundButton : Button
 // Rounded "glass" card: fill, soft top highlight, hairline border.
 class GlassPanel : Panel
 {
-    public int Radius = 12;
+    public int Radius = Ds.RCard;
 
     public GlassPanel()
     {
@@ -438,10 +438,10 @@ class GlassPanel : Panel
         {
             using (Brush b = new SolidBrush(BackColor)) g.FillPath(b, p);
             g.SetClip(p);
-            using (LinearGradientBrush sh = new LinearGradientBrush(new Rectangle(0, 0, Width, Math.Max(2, Height)), Color.FromArgb(Pal.Dark ? 18 : 50, Color.White), Color.FromArgb(0, Color.White), 90f))
+            using (LinearGradientBrush sh = new LinearGradientBrush(new Rectangle(0, 0, Width, Math.Max(2, Height)), Ds.Sheen, Color.FromArgb(0, Color.White), 90f))
                 g.FillRectangle(sh, 0, 0, Width, Math.Max(2, Height));
             g.ResetClip();
-            using (Pen pen = new Pen(Color.FromArgb(Pal.Dark ? 38 : 60, Pal.Dark ? Color.White : Pal.Brand), 1f)) g.DrawPath(pen, p);
+            using (Pen pen = new Pen(Ds.Hairline, 1f)) g.DrawPath(pen, p);
         }
         base.OnPaint(e);
     }
@@ -485,7 +485,7 @@ class RailPanel : Panel
                 g.FillPath(pg, gp);
             }
         }
-        using (Pen line = new Pen(Color.FromArgb(Pal.Dark ? 40 : 60, Pal.Dark ? Color.White : Pal.Brand), 1f)) g.DrawLine(line, r.Right - 1, 0, r.Right - 1, r.Bottom);
+        using (Pen line = new Pen(Ds.Hairline, 1f)) g.DrawLine(line, r.Right - 1, 0, r.Right - 1, r.Bottom);
     }
 }
 class ClearPanel : Panel { protected override void OnPaintBackground(PaintEventArgs e) { RailPanel.PaintFor(this, e.Graphics); } }
@@ -533,10 +533,10 @@ class GlassCombo : ComboBox
             Color around = Parent != null ? Parent.BackColor : Pal.Card;
             g.Clear(around);
             Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
-            using (GraphicsPath p = AccountIcon.Rounded(r, 8))
+            using (GraphicsPath p = AccountIcon.Rounded(r, Ds.RControl))
             {
                 using (Brush b = new SolidBrush(Pal.Blend(Pal.Card, Pal.Dark ? Color.White : Color.Black, hover || DroppedDown ? 0.14 : 0.07))) g.FillPath(b, p);
-                using (Pen pen = new Pen(hover || DroppedDown ? Pal.Brand : Color.FromArgb(Pal.Dark ? 60 : 90, Pal.Dark ? Color.White : Pal.Brand), 1f)) g.DrawPath(pen, p);
+                using (Pen pen = new Pen(hover || DroppedDown ? Pal.BrandInk : Ds.Hairline, 1f)) g.DrawPath(pen, p);
             }
             string t = SelectedIndex >= 0 ? Convert.ToString(Items[SelectedIndex]) : "";
             TextRenderer.DrawText(g, t, Font, new Rectangle(10, 0, Width - 34, Height), Pal.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
@@ -588,10 +588,10 @@ class GlassEdit : TextBox
         if (!Visible) return;
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        using (GraphicsPath p = AccountIcon.Rounded(new Rectangle(Left - 8, Top - 6, Width + 15, Height + 11), 8))
+        using (GraphicsPath p = AccountIcon.Rounded(new Rectangle(Left - 8, Top - 6, Width + 15, Height + 11), Ds.RControl))
         {
             using (Brush b = new SolidBrush(BackColor)) g.FillPath(b, p);
-            using (Pen pen = new Pen(Focused ? Pal.Brand : Color.FromArgb(Pal.Dark ? 60 : 90, Pal.Dark ? Color.White : Pal.Brand), Focused ? 1.6f : 1f)) g.DrawPath(pen, p);
+            using (Pen pen = new Pen(Focused ? Pal.BrandInk : Ds.Hairline, Focused ? 1.6f : 1f)) g.DrawPath(pen, p);
         }
     }
 }
@@ -614,7 +614,7 @@ class PalettePanel : GlassPanel
     public PalettePanel(System.Collections.Generic.List<PaletteItem> items, Action<int> pick)
     {
         this.items = items; this.pick = pick;
-        Radius = 14; BackColor = Pal.Card; Size = new Size(520, 392);
+        Radius = Ds.ROverlay; BackColor = Pal.Card; Size = new Size(520, 392);
         t.BorderStyle = BorderStyle.None; t.Font = new Font("Segoe UI", 13f); t.BackColor = Pal.Card; t.ForeColor = Pal.Text;
         t.SetBounds(50, 20, Width - 76, 28); Ui.Cue(t, "Search accounts and actions");
         l.BorderStyle = BorderStyle.None; l.BackColor = Pal.Card; l.ForeColor = Pal.Text; l.IntegralHeight = false;
@@ -695,7 +695,7 @@ class PalettePanel : GlassPanel
         using (GraphicsPath p = AccountIcon.Rounded(new Rectangle(0, 0, Width - 1, Height - 1), Radius))
         using (Pen pen = new Pen(Color.FromArgb(170, Pal.Brand), 1.6f)) g.DrawPath(pen, p);
         using (Font f = new Font("Segoe MDL2 Assets", 12f)) TextRenderer.DrawText(g, "", f, new Point(18, 22), Pal.Sub);
-        using (Pen sep = new Pen(Color.FromArgb(Pal.Dark ? 45 : 70, Pal.Dark ? Color.White : Pal.Brand), 1f)) g.DrawLine(sep, 14, 58, Width - 14, 58);
+        using (Pen sep = new Pen(Ds.Hairline, 1f)) g.DrawLine(sep, 14, 58, Width - 14, 58);
         using (Font f = new Font("Segoe UI", 8f))
             TextRenderer.DrawText(g, Loc.T("Enter = open     Esc = close"), f, new Rectangle(0, Height - 30, Width, 24), Pal.Sub, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }

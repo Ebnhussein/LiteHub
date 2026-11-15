@@ -115,6 +115,7 @@ static class Loc
         "Side bar, icons only|شريط جانبي بالأيقونات فقط|Barra lateral solo con iconos|Barre latérale, icônes seulement|Seitenleiste nur mit Symbolen|Barra lateral só com ícones|Kenar çubuğu, yalnızca simgeler|Боковая панель, только значки",
         "Expand or collapse the side bar (Ctrl+B)|وسّع الشريط الجانبي أو صغّره (Ctrl+B)|Expandir o contraer la barra lateral (Ctrl+B)|Agrandir ou réduire la barre latérale (Ctrl+B)|Seitenleiste erweitern oder einklappen (Strg+B)|Expandir ou recolher a barra lateral (Ctrl+B)|Kenar çubuğunu genişlet veya daralt (Ctrl+B)|Развернуть или свернуть боковую панель (Ctrl+B)",
         "Expand or collapse the side bar|وسّع الشريط الجانبي أو صغّره|Expandir o contraer la barra lateral|Agrandir ou réduire la barre latérale|Seitenleiste erweitern oder einklappen|Expandir ou recolher a barra lateral|Kenar çubuğunu genişlet veya daralt|Развернуть или свернуть боковую панель",
+        "No downloads yet|لا توجد تنزيلات بعد|Aún no hay descargas|Aucun téléchargement pour l'instant|Noch keine Downloads|Nenhum download ainda|Henüz indirme yok|Загрузок пока нет",
         "Settings|الإعدادات|Ajustes|Paramètres|Einstellungen|Configurações|Ayarlar|Настройки",
         "General|عام|General|Général|Allgemein|Geral|Genel|Общие",
         "Personalization|التخصيص|Personalización|Personnalisation|Anpassung|Personalização|Kişiselleştirme|Персонализация",

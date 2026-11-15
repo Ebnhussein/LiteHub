@@ -34,9 +34,9 @@ class SettingsPanel : Panel
         perfTimer.Interval = 4000; perfTimer.Tick += delegate { FillPerf(); };
         this.m = m; this.page = page;
         Dock = DockStyle.Fill; BackColor = Pal.Page;
-        nav.Dock = DockStyle.Left; nav.Width = 210; nav.BackColor = Pal.Page; nav.AutoScroll = true;
+        nav.Dock = DockStyle.Left; nav.Width = 232; nav.BackColor = Pal.Page; nav.AutoScroll = true;
         content.Dock = DockStyle.Fill; content.FlowDirection = FlowDirection.TopDown; content.WrapContents = false;
-        content.AutoScroll = true; content.Padding = new Padding(40, 24, 20, 20); content.BackColor = Pal.Page;
+        content.AutoScroll = true; content.Padding = new Padding(Ds.PageX, Ds.PageTop, 20, 20); content.BackColor = Pal.Page;
         Controls.Add(content);
         Controls.Add(nav);
         Ui.DarkScroll(content); Ui.DarkScroll(nav);
@@ -48,7 +48,7 @@ class SettingsPanel : Panel
         if (Width > 400 && Math.Abs(Width - builtWidth) > 4) Build();
     }
 
-    int RowWidth { get { return Math.Max(420, Width - 210 - 40 - 20 - SystemInformation.VerticalScrollBarWidth - 10); } }
+    int RowWidth { get { return Math.Max(420, Width - 232 - Ds.PageX - 20 - SystemInformation.VerticalScrollBarWidth - 10); } }
 
     void Go(string p) { page = p; Build(); }
 
@@ -123,7 +123,7 @@ class SettingsPanel : Panel
 
     void Title(string t)
     {
-        Label l = Ui.Text(t, 20f, true, false); l.Margin = new Padding(0, 0, 0, 14); content.Controls.Add(l);
+        Label l = Ui.Text(t, Ds.Title, true, false); l.Margin = new Padding(0, 0, 0, 14); content.Controls.Add(l);
     }
 
     void Heading(string t)
@@ -388,9 +388,9 @@ class SettingsPanel : Panel
         Add(FolderRow(w, "Choose where this account's downloads are saved", a.DownloadDir, delegate(string p) { a.DownloadDir = p; m.SaveApps(); }));
         Heading("Manage account");
         Button rm = Ui.Btn("Remove", 90, delegate { m.RemoveApp(a); });
-        rm.BackColor = Color.FromArgb(120, 40, 40); rm.ForeColor = Color.White;
+        rm.BackColor = Ds.Danger; rm.ForeColor = Color.White;
         Panel rr = Ui.Row(w, "Remove account", "Optionally deletes its saved login and data too", rm);
-        rr.BackColor = Pal.Dark ? Color.FromArgb(60, 35, 35) : Color.FromArgb(250, 225, 225);
+        rr.BackColor = Pal.Blend(Pal.Card, Ds.Danger, Pal.Dark ? 0.18 : 0.10);
         Add(rr);
     }
 
@@ -468,10 +468,10 @@ class AddAccountPanel : Panel
         this.m = m;
         Dock = DockStyle.Fill; BackColor = Pal.Page;
         Panel left = new Panel(); left.Dock = DockStyle.Left; left.Width = 320; left.BackColor = Pal.Page;
-        Label t = Ui.Text("Select a service", 16f, true, false); t.Location = new Point(28, 26);
-        search = Ui.Edit("", 260); search.Location = new Point(28, 74); Ui.Cue(search, "Search services");
+        Label t = Ui.Text("Select a service", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop);
+        search = Ui.Edit("", 260); search.Location = new Point(Ds.PageX, 84); Ui.Cue(search, "Search services");
         Label hint = Ui.Text("You can add the same service many times\n(two WhatsApps, three Gmails...). Each one has\nits own login and can run at the same time.", 9f, false, true);
-        hint.Location = new Point(28, 112);
+        hint.Location = new Point(Ds.PageX, 124);
         left.Controls.AddRange(new Control[] { t, search, hint });
         cards.Dock = DockStyle.Fill; cards.AutoScroll = true; cards.Padding = new Padding(10, 14, 10, 10); cards.BackColor = Pal.Page;
         cards.FlowDirection = FlowDirection.TopDown; cards.WrapContents = false;
@@ -498,7 +498,7 @@ class AddAccountPanel : Panel
         Label name = Ui.Text(s.Name, 11f, true, false); name.Location = new Point(60, 12); name.MaximumSize = new Size(220, 0); p.Controls.Add(name);
         string host = s.IsTemplate ? Loc.T("your own address") : new Uri(s.Url).Host;
         Label sub = Ui.Text(n > 0 ? host + "  •  " + Loc.F("{0} added", n) : host, 8.5f, false, true); sub.Location = new Point(60, 38); p.Controls.Add(sub);
-        Button b = Ui.Primary(Ui.Btn(n > 0 ? "Add another  >" : "Add account  >", 130, delegate { add(); }));
+        Button b = Ui.Btn(n > 0 ? "Add another  >" : "Add account  >", 130, delegate { add(); });
         b.Location = new Point(146, 62); p.Controls.Add(b);
         return p;
     }
@@ -556,13 +556,17 @@ class DownloadsPanel : Panel
     readonly MainForm m;
     readonly ListView list = new ListView();
     readonly Timer refresh = new Timer();
+    readonly Panel listCard = new GlassPanel();
+    readonly Label empty;
 
     public DownloadsPanel(MainForm m)
     {
         this.m = m;
         Dock = DockStyle.Fill; BackColor = Pal.Page;
-        Label t = Ui.Text("Downloads", 16f, true, false); t.Location = new Point(28, 20); Controls.Add(t);
-        list.Location = new Point(28, 64); list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        Label t = Ui.Text("Downloads", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop); Controls.Add(t);
+        listCard.Location = new Point(Ds.PageX, 76); listCard.BackColor = Pal.Card; listCard.Padding = new Padding(6);
+        listCard.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        list.Dock = DockStyle.Fill;
         list.View = View.Details; list.FullRowSelect = true; list.BorderStyle = BorderStyle.None; list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         list.BackColor = Pal.Card; list.ForeColor = Pal.Text; list.Font = new Font("Segoe UI", 10f);
         list.Columns.Add(Loc.T("File"), 380); list.Columns.Add(Loc.T("Account"), 140); list.Columns.Add(Loc.T("Status"), 140);
@@ -581,20 +585,22 @@ class DownloadsPanel : Panel
         ToolStripMenuItem show = new ToolStripMenuItem(Loc.T("Show in folder")); show.Click += delegate { Open(true); };
         cm.Items.Add(open); cm.Items.Add(show);
         list.ContextMenuStrip = cm;
-        Controls.Add(list);
+        listCard.Controls.Add(list); Controls.Add(listCard);
+        empty = Ui.Text("No downloads yet", Ds.Body, false, true); empty.BackColor = Pal.Card; empty.Location = new Point(Ds.S4 + 6, 58);
+        listCard.Controls.Add(empty); empty.BringToFront();
         Ui.DarkScroll(list);
         Button folder = Ui.Btn("Open downloads folder", 170, delegate
         {
             string d = string.IsNullOrEmpty(Cfg.DownloadDir) ? Paths.DefaultDownloads : Cfg.DownloadDir;
             if (Directory.Exists(d)) Process.Start(d);
         });
-        folder.Location = new Point(28, 0); folder.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; Controls.Add(folder);
+        folder.Location = new Point(Ds.PageX, 0); folder.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; Controls.Add(folder);
         Button clear = Ui.Btn("Clear list", 100, delegate { m.Downloads.Clear(); Fill(); });
         clear.Location = new Point(210, 0); clear.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; Controls.Add(clear);
         Resize += delegate
         {
-            list.Size = new Size(Width - 56, Height - 64 - 56);
-            folder.Top = clear.Top = Height - 44;
+            listCard.Size = new Size(Width - 2 * Ds.PageX, Height - 76 - 60);
+            folder.Top = clear.Top = Height - 48;
             list.Columns[2].Width = Math.Max(140, list.ClientSize.Width - 380 - 140);   // last column fills the header
         };
         refresh.Interval = 1000; refresh.Tick += delegate { Fill(); }; refresh.Start();
@@ -628,6 +634,7 @@ class DownloadsPanel : Panel
         }
         if (sel >= 0 && sel < list.Items.Count) list.Items[sel].Selected = true;
         list.EndUpdate();
+        empty.Visible = list.Items.Count == 0;
     }
 
     void Open(bool folder)
@@ -653,7 +660,7 @@ class InboxPanel : Panel
     {
         this.m = m;
         Dock = DockStyle.Fill; BackColor = Pal.Page;
-        Label t = Ui.Text("Inbox", 16f, true, false); t.Location = new Point(28, 20); Controls.Add(t);
+        Label t = Ui.Text("Inbox", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop); Controls.Add(t);
         markAll = Ui.Btn("Mark all read", 130, delegate { m.InboxMarkAllRead(); });
         clear = Ui.Btn("Clear", 80, delegate { m.InboxClear(); });
         Controls.Add(markAll); Controls.Add(clear);
@@ -669,9 +676,9 @@ class InboxPanel : Panel
 
     void Layout_()
     {
-        markAll.Location = new Point(Width - 28 - 80 - 8 - 130, 18); clear.Location = new Point(Width - 28 - 80, 18);
-        q.Location = new Point(Math.Max(200, Width - 28 - 80 - 8 - 130 - 32 - 200), 24);
-        list.SetBounds(28, 64, Math.Max(100, Width - 56), Math.Max(100, Height - 64 - 12));
+        markAll.Location = new Point(Width - Ds.PageX - 80 - 8 - 130, Ds.PageTop + 2); clear.Location = new Point(Width - Ds.PageX - 80, Ds.PageTop + 2);
+        q.Location = new Point(Math.Max(200, Width - Ds.PageX - 80 - 8 - 130 - 32 - 200), Ds.PageTop + 8);
+        list.SetBounds(Ds.PageX, 76, Math.Max(100, Width - 2 * Ds.PageX), Math.Max(100, Height - 76 - 12));
     }
 
     protected override void OnResize(EventArgs e)
@@ -715,7 +722,7 @@ class InboxPanel : Panel
             title.SetBounds(66, 32, w - 110, 20); p.Controls.Add(title);
             Label body = Ui.Text(it.Body.Replace("\r", " ").Replace("\n", " "), 9f, false, true); body.AutoSize = false; body.AutoEllipsis = true;
             body.SetBounds(66, 54, w - 110, 18); p.Controls.Add(body);
-            if (!it.Read) { Label u = Ui.Text("●", 9f, false, false); u.ForeColor = Pal.Brand; u.Location = new Point(w - 26, 34); p.Controls.Add(u); u.Click += delegate { m.OpenInbox(item); }; }
+            if (!it.Read) { Label u = Ui.Text("●", 9f, false, false); u.ForeColor = Pal.BrandInk; u.Location = new Point(w - 26, 34); p.Controls.Add(u); u.Click += delegate { m.OpenInbox(item); }; }
             foreach (Control c in p.Controls) { c.Cursor = Cursors.Hand; c.Click += delegate { m.OpenInbox(item); }; }
             p.Click += delegate { m.OpenInbox(item); };
             list.Controls.Add(p);

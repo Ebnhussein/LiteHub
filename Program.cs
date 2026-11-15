@@ -249,6 +249,8 @@ class MainForm : Form
         if (Cfg.Colorful && active != null) bar = Pal.Blend(Pal.Bar, active.AccentColor, Pal.Dark ? 0.22 : 0.3);
         top.BackColor = bar; leftBar.BackColor = bar; tools.BackColor = Color.Transparent; icons.BackColor = Color.Transparent; railHead.BackColor = Color.Transparent; leftBar.Invalidate();
         if (wsBtn != null) { wsBtn.BackColor = Pal.Card; wsBtn.ForeColor = Pal.Text; }
+        if (railTitle != null) railTitle.ForeColor = Pal.Text;
+        if (railToggle != null) railToggle.ForeColor = Pal.Text;
         tab.BackColor = Pal.Card;
         foreach (Button b in new Button[] { toolBtns[0], toolBtns[1], toolBtns[2], toolBtns[3], toolBtns[4], gridBtn })
         {
@@ -1518,7 +1520,7 @@ static class Taskbar
                     using (Graphics g = Graphics.FromImage(bmp))
                     {
                         g.SmoothingMode = SmoothingMode.AntiAlias;
-                        using (Brush b = new SolidBrush(Color.FromArgb(220, 60, 20))) g.FillEllipse(b, 0, 0, 15, 15);
+                        using (Brush b = new SolidBrush(Ds.Danger)) g.FillEllipse(b, 0, 0, 15, 15);
                         using (Font f = new Font("Segoe UI", count > 99 ? 6f : 7.5f, FontStyle.Bold))
                         using (StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
                             g.DrawString(count > 99 ? "99+" : count.ToString(), f, Brushes.White, new RectangleF(0, 0, 16, 16), sf);
