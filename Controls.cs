@@ -16,6 +16,22 @@ class AccountIcon : Control
         Cursor = Cursors.Hand;
         DoubleBuffered = true;
         SetStyle(ControlStyles.SupportsTransparentBackColor, true); BackColor = Color.Transparent;
+        AllowDrop = true;
+    }
+
+    // Files dropped on a tile are sent to that account (dropped into its page, e.g. an open WhatsApp chat).
+    public static Action<AppDef, string[]> FilesDropped;
+    bool dropHover;
+
+    protected override void OnDragEnter(DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) { e.Effect = DragDropEffects.Copy; dropHover = true; Invalidate(); } base.OnDragEnter(e); }
+    protected override void OnDragOver(DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; base.OnDragOver(e); }
+    protected override void OnDragLeave(EventArgs e) { dropHover = false; Invalidate(); base.OnDragLeave(e); }
+    protected override void OnDragDrop(DragEventArgs e)
+    {
+        dropHover = false; Invalidate();
+        string[] f = e.Data.GetData(DataFormats.FileDrop) as string[];
+        if (f != null && FilesDropped != null) FilesDropped(App, f);
+        base.OnDragDrop(e);
     }
 
     // Drag a tile onto another one to reorder (a plain click still opens the account).
@@ -131,6 +147,8 @@ class AccountIcon : Control
             using (Brush lb = new SolidBrush(Pal.Card)) g.FillEllipse(lb, r.X - 4, r.Bottom - 10, 14, 14);
             using (Font lf = new Font("Segoe MDL2 Assets", 7f)) TextRenderer.DrawText(g, "", lf, new Point(r.X - 3, r.Bottom - 8), Pal.Text);
         }
+        if (dropHover)
+            using (GraphicsPath dp = Rounded(new Rectangle(2, 2, Width - 5, Height - 5), 13)) using (Pen dpen = new Pen(Ds.Success, 3f)) g.DrawPath(dpen, dp);
         if (DropTarget == App)
             using (GraphicsPath dp = Rounded(new Rectangle(2, 2, Width - 5, Height - 5), 13)) using (Pen dpen = new Pen(Pal.BrandInk, 2.5f)) g.DrawPath(dpen, dp);
         if (Wide)

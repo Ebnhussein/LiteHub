@@ -345,6 +345,7 @@ static class Cfg
     public static bool LeftNav = true, RailWide = true, Colorful, FilterDl, KeepInbox = true;
     public static bool Notify = true, BadgeList = true, BadgeTaskbar = true, HotkeyOn = true, CloseToTray = true;
     public static long DndUntil;
+    public static int ToastStyle;   // 0 = LiteHub card, 1 = Windows notification
     public static int MemCapMB;
     public static bool DndActive { get { return DateTime.Now.Ticks < DndUntil; } }
     public static string UpdateUrl = "", Workspace = "", Lang = "", Hotkey = "Alt+E", PassSalt = "", PassHash = "", DownloadDir = "";
@@ -379,6 +380,7 @@ static class Cfg
                     case "KeepInbox": KeepInbox = b; break;
                     case "DndUntil": long.TryParse(v, out DndUntil); break;
                     case "MemCapMB": MemCapMB = Math.Max(0, n); break;
+                    case "ToastStyle": ToastStyle = Math.Max(0, Math.Min(1, n)); break;
                     case "UpdateUrl": UpdateUrl = v.Trim(); break;
                     case "PassSalt": PassSalt = v; break;
                     case "PassHash": PassHash = v; break;
@@ -397,7 +399,7 @@ static class Cfg
         s.AppendLine("Notify=" + B(Notify)); s.AppendLine("BadgeList=" + B(BadgeList)); s.AppendLine("BadgeTaskbar=" + B(BadgeTaskbar));
         s.AppendLine("HotkeyOn=" + B(HotkeyOn)); s.AppendLine("CloseToTray=" + B(CloseToTray));
         s.AppendLine("Lang=" + Lang); s.AppendLine("Workspace=" + Workspace.Replace("\r", "").Replace("\n", "")); s.AppendLine("KeepInbox=" + B(KeepInbox));
-        s.AppendLine("DndUntil=" + DndUntil); s.AppendLine("MemCapMB=" + MemCapMB); s.AppendLine("UpdateUrl=" + UpdateUrl.Replace("\r", "").Replace("\n", "")); s.AppendLine("Hotkey=" + Hotkey); s.AppendLine("PassSalt=" + PassSalt); s.AppendLine("PassHash=" + PassHash);
+        s.AppendLine("DndUntil=" + DndUntil); s.AppendLine("MemCapMB=" + MemCapMB); s.AppendLine("ToastStyle=" + ToastStyle); s.AppendLine("UpdateUrl=" + UpdateUrl.Replace("\r", "").Replace("\n", "")); s.AppendLine("Hotkey=" + Hotkey); s.AppendLine("PassSalt=" + PassSalt); s.AppendLine("PassHash=" + PassHash);
         s.AppendLine("DownloadDir=" + DownloadDir.Replace("\r", "").Replace("\n", ""));
         try
         {

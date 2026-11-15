@@ -126,6 +126,7 @@ class MainForm : Form
         top.Controls.Add(gridBtn);
         top.Controls.Add(tab);
         top.Controls.Add(logo);
+        AccountIcon.FilesDropped = delegate(AppDef a, string[] f) { SendFiles(a, f); };
         AccountIcon.Reorder = delegate(AppDef from, AppDef to) { MoveApp(from, apps.IndexOf(to) - apps.IndexOf(from)); };   // drag a tile onto another
         foreach (AppDef a in apps) AddIcon(a);
         RefreshSiblings();
@@ -161,6 +162,12 @@ class MainForm : Form
                 warm.Start();
             }
             FetchMissingIcons();
+            if (!string.IsNullOrEmpty(Paths.TestData))
+            {   // test hooks: LITEHUB_TOAST=1 shows sample cards, LITEHUB_DROP=<file> drops a file on the first account
+                if (Environment.GetEnvironmentVariable("LITEHUB_TOAST") == "1") { ToastSample(); if (apps.Count > 1) Toast.Show(apps[1], "New invoice from Acme", "Your invoice #2231 is ready to download and pay before Friday", delegate { }); }
+                string df = Environment.GetEnvironmentVariable("LITEHUB_DROP");
+                if (df != null && apps.Count > 0) SendFiles(apps[0], new string[] { df });
+            }
             if (apps.Count == 0 && !background) ShowOverlay(new AddAccountPanel(this), "Add account");
             if (background) Hide();
             UpdateTaskbar();
@@ -211,6 +218,12 @@ class MainForm : Form
             railToggle.Click += delegate { ToggleRail(); };
             tip.SetToolTip(railToggle, Loc.T("Expand or collapse the side bar (Ctrl+B)"));
             railHead.Controls.AddRange(new Control[] { railLogo, railTitle, railToggle, wsBtn });
+            foreach (Control dc in new Control[] { railHead, railLogo, railTitle })
+            {   // drop files on the logo: choose which account gets them
+                dc.AllowDrop = true;
+                dc.DragEnter += delegate(object s, DragEventArgs e) { e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; };
+                dc.DragDrop += delegate(object s, DragEventArgs e) { string[] f = e.Data.GetData(DataFormats.FileDrop) as string[]; if (f != null) SendPalette(f); };
+            }
         }
         leftBar.Width = wide ? 232 : 64;
         railHead.Height = wide ? 92 : 112;
@@ -315,7 +328,7 @@ class MainForm : Form
             if (a == active && overlay == null && b.ContextMenuStrip != null) b.ContextMenuStrip.Show(b, new Point(b.Width, 0));
             else ShowApp(a);
         };
-        tip.SetToolTip(b, a.Name);
+        tip.SetToolTip(b, a.Name + "  -  " + Loc.T("Drop files here to send"));
         ContextMenuStrip m = new AutoMenu();
         ToolStripMenuItem reload = new ToolStripMenuItem(Loc.T("Reload"));
         reload.Click += delegate { if (a.View != null && a.View.CoreWebView2 != null) a.View.Reload(); };
@@ -416,6 +429,45 @@ class MainForm : Form
         }
         ToolStripMenuItem nw = new ToolStripMenuItem(Loc.T("New workspace..."));
         nw.Click += delegate { string n = AskWorkspace(); if (n.Length > 0) MoveToWorkspace(a, n); }; parent.DropDownItems.Add(nw);
+    }
+
+    // ---------- drag and drop: send files to an account ----------
+
+    // Open the account and drop the files into its page like a real drag, so an open WhatsApp chat shows its "send" preview.
+    public async void SendFiles(AppDef a, string[] paths)
+    {
+        List<string> files = new List<string>();
+        foreach (string p in paths) if (File.Exists(p)) files.Add(p);
+        if (files.Count == 0) return;
+        ShowApp(a);
+        for (int i = 0; i < 60 && (a.View == null || a.View.CoreWebView2 == null || a.View.CoreWebView2.Source == "about:blank"); i++) await Task.Delay(250);
+        if (a.View == null || a.View.CoreWebView2 == null) return;
+        await Task.Delay(600);
+        try
+        {
+            double scale = a.View.DeviceDpi / 96.0;
+            int x = (int)(Math.Max(80, a.View.Width * 3 / 5) / scale), y = (int)(Math.Max(80, a.View.Height / 2) / scale);   // the chat area, right of the chat list
+            StringBuilder list = new StringBuilder();
+            foreach (string f in files) { if (list.Length > 0) list.Append(","); list.Append("\"" + f.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""); }
+            string data = "\"data\":{\"items\":[],\"files\":[" + list + "],\"dragOperationsMask\":1}";
+            foreach (string type in new string[] { "dragEnter", "dragOver", "drop" })
+            {
+                await a.View.CoreWebView2.CallDevToolsProtocolMethodAsync("Input.dispatchDragEvent", "{\"type\":\"" + type + "\",\"x\":" + x + ",\"y\":" + y + "," + data + "}");
+                await Task.Delay(150);
+            }
+            NLog(a.Name + ": dropped " + files.Count + " file(s) into the page");
+        }
+        catch (Exception ex) { NLog(a.Name + ": file drop failed: " + ex.Message); MessageBox.Show(this, Loc.T("Could not drop the files into the page. Open a chat first."), "LiteHub"); }
+    }
+
+    // Files dropped on the logo: pick the account to send them to.
+    void SendPalette(string[] files)
+    {
+        if (palette != null && !palette.IsDisposed) { palette.Close(); palette = null; }
+        List<PaletteItem> items = new List<PaletteItem>(); List<AppDef> targets = new List<AppDef>();
+        foreach (AppDef a in apps) { items.Add(new PaletteItem { Text = a.Name, Dot = a.AccentColor, Hint = a.Workspace }); targets.Add(a); }
+        palette = new PalettePanel(items, delegate(int i) { if (i >= 0) SendFiles(targets[i], files); });
+        palette.ShowIn(host);
     }
 
     // New account of the same service as `a` (own name, own login).
@@ -1277,8 +1329,9 @@ class MainForm : Form
                 NLog(a.Name + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
                 a.LastNotified = DateTime.Now;
                 if (a.Locked) { nt = ""; nb = Loc.T("New message"); }
-                if (Cfg.DndActive || a.Locked) e.Handled = true;   // no pop-up; a locked account never shows its text
-                if (a.Locked && !Cfg.DndActive) tray.ShowBalloonTip(3000, a.Name, Loc.T("New message"), ToolTipIcon.Info);
+                bool ours = Cfg.ToastStyle == 0;
+                if (Cfg.DndActive || a.Locked || ours) e.Handled = true;   // no Windows pop-up (ours, or none); a locked account never shows its text
+                if (!Cfg.DndActive && (ours || a.Locked)) { string tt = nt, tb = nb; BeginInvoke(new Action(delegate { ShowToast(a, tt, tb); })); }
                 BeginInvoke(new Action(delegate { AddInbox(a, nt, nb); }));
             };
             c.PermissionRequested += delegate(object s, CoreWebView2PermissionRequestedEventArgs e)
@@ -1452,11 +1505,21 @@ class MainForm : Form
         NLog(a.Name + ": unread +" + n + " (looking " + looking + ", covered by a notification " + covered + ")");
         if (looking || covered) return;
         AddInbox(a, a.Locked ? "" : Loc.T("New messages"), Loc.F("{0} new", n));
-        if (Cfg.Notify && a.Notify && !Cfg.DndActive)
-        {
-            balloonApp = a;
-            tray.ShowBalloonTip(4000, a.Name, a.Locked ? Loc.T("New message") : Loc.F("{0} new", n), ToolTipIcon.Info);
-        }
+        ShowToast(a, a.Locked ? "" : Loc.T("New messages"), a.Locked ? Loc.T("New message") : Loc.F("{0} new", n));
+    }
+
+    // The desktop alert: LiteHub's own card, or the plain Windows balloon if you chose that.
+    public void ShowToast(AppDef a, string title, string body)
+    {
+        if (!Cfg.Notify || !a.Notify || Cfg.DndActive) return;
+        if (Cfg.ToastStyle == 1) { balloonApp = a; tray.ShowBalloonTip(4000, a.Name, title.Length == 0 ? body : title + ": " + body, ToolTipIcon.Info); return; }
+        Toast.Show(a, title, body, delegate { Restore(); ShowApp(a); });
+    }
+
+    public void ToastSample()
+    {
+        AppDef a = active ?? (apps.Count > 0 ? apps[0] : null);
+        Toast.Show(a, Loc.T("Sample notification"), Loc.T("This is how new messages will look. Click to open the account."), delegate { });
     }
 
     void Sweep()
