@@ -26,15 +26,22 @@ and gigabytes of memory. LiteHub is built the other way around:
 - Downloads go to the folder you choose (global or per account), with a list and a "finished" notice.
 - Settings: theme (system, light, dark), top or left navigation, per-account color/icon/notifications/download folder, start with Windows, global shortcut (default Alt+E), passcode on launch.
 - Close button hides to the tray; running it twice just brings the window back.
+- **Workspaces:** group accounts (Work, Personal...) and show one group at a time in the side rail.
+- **Unified inbox:** every notification from every account in one list (bell button); click one to open its account. Kept on this PC only, and you can turn that off.
+- **Memory meter:** see what each account uses, put it to sleep with one click, or set a memory limit so the least recently used accounts sleep automatically.
+- **Do not disturb**, and a **passcode lock per account** (same passcode as the launch lock).
+- **Quick switcher** (Ctrl+K), Ctrl+1..9 to jump to an account, Ctrl+Tab to cycle.
+- 8 interface languages: English, Arabic, Spanish, French, German, Portuguese, Turkish, Russian (Arabic text is right-to-left; the window layout itself is not mirrored yet).
 
 ![Add account](docs/add-account.png)
 ![Settings](docs/settings.png)
 
 ## Install
 
-1. Download the zip from Releases and extract it anywhere.
-2. Run `LiteHub.exe`. (Windows 10/11 with the Microsoft Edge WebView2 Runtime, which Windows already has.)
-3. The program is not code-signed yet, so Windows SmartScreen may warn the first time: **More info, Run anyway**.
+1. Download `LiteHub-<version>-Setup.exe` from Releases and run it (per user, no admin rights, removable from Windows Settings), or download the zip, extract it anywhere and run `LiteHub.exe`.
+2. Silent install for scripts: `LiteHub-<version>-Setup.exe /S` (`/D=C:\folder` to choose the folder, `/NODESKTOP` to skip the desktop shortcut).
+3. Needs (Windows 10/11 with the Microsoft Edge WebView2 Runtime, which Windows already has.)
+4. The program is not code-signed yet, so Windows SmartScreen may warn the first time: **More info, Run anyway**.
 
 Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub`. Delete that folder to reset everything.
 
@@ -42,6 +49,8 @@ Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub`. Delete that
 
 - No analytics, no accounts, no network calls of its own except fetching each platform's icon from that platform's own site.
 - Logins stay on your PC, one separate browser profile per account.
+- The inbox keeps notification text (message previews) in `%LOCALAPPDATA%\LiteHub\inbox.txt` unless you turn "Remember inbox" off; locked accounts store no text.
+- "Check for updates" only runs when you click it, and only if `UpdateUrl=` (a GitHub "latest release" API address) is set in `settings.txt`.
 - The passcode is stored as a salted PBKDF2 hash, never in clear text.
 - It does not read your messages; the web apps run exactly as in a normal browser.
 - The web engine is Microsoft's Edge WebView2, which follows your Windows diagnostic-data settings; LiteHub itself sends nothing.
@@ -51,7 +60,7 @@ Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub`. Delete that
 ```
 build.bat
 bin\LiteHub.exe --selftest      (exit code 0 = built-in checks pass)
-powershell -File tools\release.ps1   (makes dist\LiteHub-<version>-win-x64.zip)
+powershell -File tools\release.ps1   (makes the zip and the Setup exe in dist\)
 ```
 
 Needs only what ships with Windows (the .NET Framework C# compiler); the WebView2 DLLs are in `lib\`.
