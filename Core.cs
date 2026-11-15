@@ -384,7 +384,7 @@ static class Pal
     public static Color Bar, Page, Card, Text, Sub, Hover, Border;
 
     // Brand color that is readable as a thin line or small text on the current surfaces (focus rings, unread dots).
-    public static Color BrandInk { get { return Dark ? Color.FromArgb(160, 155, 248) : Brand; } }
+    public static Color BrandInk { get { return Dark ? Color.FromArgb(64, 156, 255) : Brand; } }   // iOS dark-mode blue
 
     public static void Update()
     {
@@ -403,13 +403,15 @@ static class Pal
         Dark = dark;
         if (dark)
         {
-            Bar = Color.FromArgb(24, 23, 34); Page = Color.FromArgb(29, 28, 41); Card = Color.FromArgb(41, 40, 58);
-            Text = Color.White; Sub = Color.FromArgb(176, 174, 196); Hover = Color.FromArgb(56, 54, 80); Border = Color.FromArgb(72, 70, 100);
+            // iOS dark: black base, secondarySystemGroupedBackground cards, secondaryLabel text
+            Bar = Color.FromArgb(18, 18, 20); Page = Color.FromArgb(0, 0, 0); Card = Color.FromArgb(28, 28, 30);
+            Text = Color.White; Sub = Color.FromArgb(152, 152, 159); Hover = Color.FromArgb(44, 44, 46); Border = Color.FromArgb(58, 58, 60);
         }
         else
         {
-            Bar = Color.FromArgb(237, 236, 250); Page = Color.FromArgb(247, 246, 255); Card = Color.White;
-            Text = Color.FromArgb(28, 26, 50); Sub = Color.FromArgb(96, 94, 125); Hover = Color.FromArgb(222, 220, 244); Border = Color.FromArgb(205, 203, 230);
+            // iOS light: systemGroupedBackground page, white cards, label colors
+            Bar = Color.FromArgb(235, 235, 240); Page = Color.FromArgb(242, 242, 247); Card = Color.White;
+            Text = Color.Black; Sub = Color.FromArgb(99, 99, 102); Hover = Color.FromArgb(229, 229, 234); Border = Color.FromArgb(209, 209, 214);
         }
     }
 

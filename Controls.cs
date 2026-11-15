@@ -34,6 +34,7 @@ class AccountIcon : Control
 
     public static GraphicsPath Rounded(Rectangle r, int rad)
     {
+        rad = Math.Max(1, Math.Min(rad, Math.Min(r.Width, r.Height) / 2));
         GraphicsPath p = new GraphicsPath(); int d = rad * 2;
         p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
         p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
@@ -108,9 +109,9 @@ class Toggle : Control
 {
     bool on;
     public event EventHandler Changed;
-    public Color OnColor = Pal.Brand;
+    public Color OnColor = Ds.Success;   // iOS switches are green when on
 
-    public Toggle() { Size = new Size(44, 22); Cursor = Cursors.Hand; DoubleBuffered = true; }
+    public Toggle() { Size = new Size(48, 28); Cursor = Cursors.Hand; DoubleBuffered = true; }
 
     public bool Checked
     {
@@ -131,20 +132,15 @@ class Toggle : Control
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Parent != null ? Parent.BackColor : Pal.Card);
-        Color c = on ? OnColor : Pal.Sub;
-        if (!Enabled) c = Color.FromArgb(90, c);
-        using (GraphicsPath p = new GraphicsPath())
-        {
-            p.AddArc(1, 1, 20, 20, 90, 180); p.AddArc(Width - 22, 1, 20, 20, 270, 180); p.CloseFigure();
-            if (on) using (Brush b = new SolidBrush(c)) g.FillPath(b, p);
-            else using (Pen pen = new Pen(c, 1.5f)) g.DrawPath(pen, p);
-        }
-        using (Brush kb = new SolidBrush(on ? Color.White : c))
-            g.FillEllipse(kb, on ? Width - 19 : 5, 5, 12, 12);
+        Color track = on ? OnColor : Pal.Blend(Pal.Card, Pal.Dark ? Color.White : Color.Black, Pal.Dark ? 0.22 : 0.16);
+        if (!Enabled) track = Pal.Blend(Pal.Card, track, 0.4);
+        Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath p = AccountIcon.Rounded(r, Height / 2)) using (Brush b = new SolidBrush(track)) g.FillPath(b, p);
+        int k = Height - 6, x = on ? Width - k - 3 : 3;
+        using (Brush sh = new SolidBrush(Color.FromArgb(50, 0, 0, 0))) g.FillEllipse(sh, x, 4, k, k);
+        g.FillEllipse(Brushes.White, x, 3, k, k);
     }
 }
-
-// Small helpers to build the settings screens.
 static class Ui
 {
     public static Label Text(string text, float size, bool bold, bool sub)
@@ -471,8 +467,8 @@ class RailPanel : Panel
     {
         Rectangle r = ClientRectangle;
         if (r.Width < 2 || r.Height < 2) return;
-        Color top = Pal.Dark ? Color.FromArgb(40, 32, 84) : Color.FromArgb(226, 222, 250);
-        Color bot = Pal.Dark ? Color.FromArgb(20, 19, 36) : Color.FromArgb(242, 240, 254);
+        Color top = Pal.Dark ? Color.FromArgb(12, 30, 66) : Color.FromArgb(218, 232, 255);
+        Color bot = Pal.Dark ? Color.FromArgb(0, 0, 0) : Color.FromArgb(235, 235, 240);
         using (LinearGradientBrush b = new LinearGradientBrush(r, top, bot, 90f)) g.FillRectangle(b, r);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         using (GraphicsPath gp = new GraphicsPath())
@@ -480,8 +476,8 @@ class RailPanel : Panel
             gp.AddEllipse(-70, -70, 220, 220);
             using (PathGradientBrush pg = new PathGradientBrush(gp))
             {
-                pg.CenterColor = Color.FromArgb(Pal.Dark ? 80 : 50, Pal.Brand2);
-                pg.SurroundColors = new Color[] { Color.FromArgb(0, Pal.Brand2) };
+                pg.CenterColor = Color.FromArgb(Pal.Dark ? 90 : 50, Pal.Brand);
+                pg.SurroundColors = new Color[] { Color.FromArgb(0, Pal.Brand) };
                 g.FillPath(pg, gp);
             }
         }
@@ -588,7 +584,7 @@ class GlassEdit : TextBox
         if (!Visible) return;
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        using (GraphicsPath p = AccountIcon.Rounded(new Rectangle(Left - 8, Top - 6, Width + 15, Height + 11), Ds.RControl))
+        using (GraphicsPath p = AccountIcon.Rounded(new Rectangle(Left - 8, Top - 6, Width + 15, Height + 11), Ds.RInput))
         {
             using (Brush b = new SolidBrush(BackColor)) g.FillPath(b, p);
             using (Pen pen = new Pen(Focused ? Pal.BrandInk : Ds.Hairline, Focused ? 1.6f : 1f)) g.DrawPath(pen, p);

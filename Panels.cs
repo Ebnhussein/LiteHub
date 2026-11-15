@@ -81,8 +81,8 @@ class SettingsPanel : Panel
         b.Text = Loc.T(text); b.SetBounds(8, y, 194, 38);
         b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Pal.Hover;
         b.TextAlign = ContentAlignment.MiddleLeft; b.Padding = new Padding(12, 0, 0, 0);
-        b.BackColor = selected ? Pal.Card : Color.Transparent; b.ForeColor = Pal.Text; b.Font = new Font("Segoe UI", 10f);
-        ((RoundButton)b).Bar = selected;
+        b.BackColor = selected ? Pal.Blend(Pal.Page, Pal.Brand, Pal.Dark ? 0.28 : 0.14) : Color.Transparent;
+        b.ForeColor = selected ? Pal.BrandInk : Pal.Text; b.Font = new Font("Segoe UI", 10f, selected ? FontStyle.Bold : FontStyle.Regular);
         b.Cursor = Cursors.Hand; b.Click += click;
         nav.Controls.Add(b);
         return b;
