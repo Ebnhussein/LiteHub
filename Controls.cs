@@ -669,6 +669,7 @@ class PalettePanel : GlassPanel
         t.KeyDown += Keys_; l.KeyDown += Keys_;
         l.MouseClick += delegate(object s, MouseEventArgs e) { int i = l.IndexFromPoint(e.Location); if (i >= 0) { l.SelectedIndex = i; Accept(); } };
         t.LostFocus += Blur; l.LostFocus += Blur;
+        using (GraphicsPath rp = AccountIcon.Rounded(new Rectangle(0, 0, Width, Height), Radius)) Region = new Region(rp);   // no square corners over the web page
         Fill();
     }
 
