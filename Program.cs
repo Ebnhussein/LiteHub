@@ -1474,7 +1474,11 @@ class MainForm : Form
                 if (b == null) { report.AppendLine("none   " + s.Name + " " + host); continue; }
                 int w = b.Width;
                 if (b.Width > 256) { Bitmap r = new Bitmap(256, 256); using (Graphics g = Graphics.FromImage(r)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(b, 0, 0, 256, 256); } b.Dispose(); b = r; }
-                b.Save(Path.Combine(dir, host + ".png"), System.Drawing.Imaging.ImageFormat.Png); b.Dispose();
+                string outFile = Path.Combine(dir, host + ".png");
+                int oldW = 0;
+                if (File.Exists(outFile)) try { using (Image ex = Image.FromFile(outFile)) oldW = ex.Width; } catch (Exception) { }
+                if (oldW >= b.Width) { b.Dispose(); report.AppendLine(oldW.ToString().PadLeft(4) + "px " + s.Name + " " + host + " (kept)"); continue; }   // never replace a sharper icon
+                b.Save(outFile, System.Drawing.Imaging.ImageFormat.Png); b.Dispose();
                 report.AppendLine(w.ToString().PadLeft(4) + "px " + s.Name + " " + host);
             }
             catch (Exception ex) { report.AppendLine("error  " + s.Name + " " + host + ": " + ex.GetBaseException().Message); }

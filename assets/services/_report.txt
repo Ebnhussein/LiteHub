@@ -1,94 +1,94 @@
-  16px WhatsApp web.whatsapp.com
- 512px Telegram web.telegram.org
+  16px WhatsApp web.whatsapp.com (kept)
+ 256px Telegram web.telegram.org (kept)
 none   Messenger messenger.com
- 256px Discord discord.com
-  35px Slack app.slack.com
- 512px Microsoft Teams teams.microsoft.com
+ 256px Discord discord.com (kept)
+  35px Slack app.slack.com (kept)
+ 256px Microsoft Teams teams.microsoft.com (kept)
 none   Google Chat chat.google.com
- 512px Android Messages messages.google.com
+ 256px Android Messages messages.google.com (kept)
 none   Skype web.skype.com
- 180px WeChat web.wechat.com
- 512px Element (Matrix) app.element.io
-1024px Snapchat web.snapchat.com
-  96px Zoom app.zoom.us
-  20px Google Meet meet.google.com
- 512px Webex web.webex.com
-  32px Instagram instagram.com
-  60px Facebook facebook.com
-  16px Threads threads.net
- 512px X (Twitter) x.com
-  64px LinkedIn linkedin.com
-  32px TikTok tiktok.com
-  64px Reddit reddit.com
- 144px Pinterest pinterest.com
- 512px Tumblr tumblr.com
- 180px Bluesky bsky.app
-1024px Mastodon mastodon.social
- 256px Gmail mail.google.com
+ 180px WeChat web.wechat.com (kept)
+ 256px Element (Matrix) app.element.io (kept)
+ 256px Snapchat web.snapchat.com (kept)
+  96px Zoom app.zoom.us (kept)
+  20px Google Meet meet.google.com (kept)
+ 256px Webex web.webex.com (kept)
+  32px Instagram instagram.com (kept)
+  60px Facebook facebook.com (kept)
+  16px Threads threads.net (kept)
+ 256px X (Twitter) x.com (kept)
+  64px LinkedIn linkedin.com (kept)
+ 256px TikTok tiktok.com (kept)
+  64px Reddit reddit.com (kept)
+ 144px Pinterest pinterest.com (kept)
+ 256px Tumblr tumblr.com (kept)
+ 180px Bluesky bsky.app (kept)
+ 256px Mastodon mastodon.social (kept)
+ 256px Gmail mail.google.com (kept)
 none   Outlook outlook.live.com
 none   Outlook (Microsoft 365) outlook.office.com
-  32px Yahoo Mail mail.yahoo.com
-  48px iCloud Mail icloud.com
-1024px Proton Mail mail.proton.me
-  16px Zoho Mail mail.zoho.com
-1024px Fastmail app.fastmail.com
- 512px AOL Mail mail.aol.com
+  32px Yahoo Mail mail.yahoo.com (kept)
+none   iCloud Mail icloud.com
+ 256px Proton Mail mail.proton.me (kept)
+  16px Zoho Mail mail.zoho.com (kept)
+ 256px Fastmail app.fastmail.com (kept)
+ 256px AOL Mail mail.aol.com (kept)
 none   Tuta Mail app.tuta.com
- 512px HEY app.hey.com
+ 256px HEY app.hey.com (kept)
 none   Google Calendar calendar.google.com
-  32px Google Drive drive.google.com
-  32px Google Docs docs.google.com
+  32px Google Drive drive.google.com (kept)
+  32px Google Docs docs.google.com (kept)
 none   Google Sheets sheets.google.com
 none   Google Keep keep.google.com
 none   Google Contacts contacts.google.com
-  64px Google Photos photos.google.com
+ 256px Google Photos photos.google.com (kept)
 none   Microsoft 365 microsoft365.com
-  16px OneDrive onedrive.live.com
- 144px OneNote onenote.com
-  32px Dropbox dropbox.com
- 512px Notion notion.so
-  32px Notion Calendar calendar.notion.so
-  64px Evernote evernote.com
+  16px OneDrive onedrive.live.com (kept)
+ 144px OneNote onenote.com (kept)
+  32px Dropbox dropbox.com (kept)
+ 256px Notion notion.so (kept)
+  32px Notion Calendar calendar.notion.so (kept)
+  64px Evernote evernote.com (kept)
 none   Trello trello.com
-  72px Asana app.asana.com
- 180px monday.com auth.monday.com
- 512px ClickUp app.clickup.com
-  48px Linear linear.app
-1024px Todoist app.todoist.com
-  48px Airtable airtable.com
- 128px Miro miro.com
- 180px Figma figma.com
-  32px Canva canva.com
- 512px Calendly calendly.com
- 512px GitHub github.com
-  32px GitLab gitlab.com
-  99px Cloudflare dash.cloudflare.com
- 256px Vercel vercel.com
- 512px Supabase supabase.com
-  60px Meta Business Suite business.facebook.com
-  60px Meta Ads Manager adsmanager.facebook.com
- 180px Google Ads ads.google.com
+  72px Asana app.asana.com (kept)
+ 180px monday.com auth.monday.com (kept)
+ 256px ClickUp app.clickup.com (kept)
+ 256px Linear linear.app (kept)
+ 256px Todoist app.todoist.com (kept)
+  48px Airtable airtable.com (kept)
+ 128px Miro miro.com (kept)
+ 180px Figma figma.com (kept)
+  32px Canva canva.com (kept)
+ 256px Calendly calendly.com (kept)
+ 256px GitHub github.com (kept)
+ 180px GitLab gitlab.com (kept)
+ 180px Cloudflare dash.cloudflare.com (kept)
+ 256px Vercel vercel.com (kept)
+ 256px Supabase supabase.com (kept)
+  60px Meta Business Suite business.facebook.com (kept)
+  60px Meta Ads Manager adsmanager.facebook.com (kept)
+ 180px Google Ads ads.google.com (kept)
 none   Google Analytics analytics.google.com
-  32px Search Console search.google.com
-  40px Looker Studio lookerstudio.google.com
-  32px TikTok Ads ads.tiktok.com
- 512px Stripe dashboard.stripe.com
-  16px PayPal paypal.com
- 180px HubSpot app.hubspot.com
- 720px Mailchimp login.mailchimp.com
- 180px ChatGPT chatgpt.com
-none   Claude claude.ai
- 512px Gemini gemini.google.com
-  48px Microsoft Copilot copilot.microsoft.com
- 180px Perplexity perplexity.ai
+  32px Search Console search.google.com (kept)
+  40px Looker Studio lookerstudio.google.com (kept)
+  32px TikTok Ads ads.tiktok.com (kept)
+ 256px Stripe dashboard.stripe.com (kept)
+  16px PayPal paypal.com (kept)
+ 180px HubSpot app.hubspot.com (kept)
+ 256px Mailchimp login.mailchimp.com (kept)
+ 180px ChatGPT chatgpt.com (kept)
+ 180px Claude claude.ai (kept)
+ 256px Gemini gemini.google.com (kept)
+  48px Microsoft Copilot copilot.microsoft.com (kept)
+ 180px Perplexity perplexity.ai (kept)
 none   DeepSeek chat.deepseek.com
- 512px Grok grok.com
- 144px YouTube youtube.com
- 512px YouTube Music music.youtube.com
-  32px Spotify open.spotify.com
+ 256px Grok grok.com (kept)
+ 144px YouTube youtube.com (kept)
+ 256px YouTube Music music.youtube.com (kept)
+  32px Spotify open.spotify.com (kept)
 none   Anghami play.anghami.com
- 512px SoundCloud soundcloud.com
- 180px Deezer deezer.com
- 512px Apple Music music.apple.com
-  32px Twitch twitch.tv
+ 256px SoundCloud soundcloud.com (kept)
+ 180px Deezer deezer.com (kept)
+ 256px Apple Music music.apple.com (kept)
+  32px Twitch twitch.tv (kept)
 none   Duolingo duolingo.com

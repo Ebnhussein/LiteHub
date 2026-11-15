@@ -220,6 +220,9 @@ static class Icons
         Uri d;
         if (!string.IsNullOrEmpty(declared) && Uri.TryCreate(declared, UriKind.Absolute, out d) && IsPublicHttps(d) &&
             !declared.ToLower().EndsWith(".svg")) list.Add(new KeyValuePair<int, Uri>(300, d));
+        // common file names when the page declares nothing useful
+        string[] guess = { "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png", "/android-chrome-512x512.png", "/android-chrome-192x192.png", "/favicon-196x196.png", "/favicon-96x96.png", "/favicon-32x32.png" };
+        for (int g = 0; g < guess.Length; g++) list.Add(new KeyValuePair<int, Uri>(400 - g * 20, new Uri(page, guess[g])));
         list.Add(new KeyValuePair<int, Uri>(50, new Uri(page, "/favicon.ico")));
         list.Sort(delegate(KeyValuePair<int, Uri> a, KeyValuePair<int, Uri> b) { return b.Key.CompareTo(a.Key); });
         return list;
@@ -295,7 +298,7 @@ static class Icons
         cands.Sort(delegate(KeyValuePair<int, Uri> a, KeyValuePair<int, Uri> b) { return b.Key.CompareTo(a.Key); });
         foreach (KeyValuePair<int, Uri> c in cands)
         {
-            if (tried++ >= 5) break;
+            if (tried++ >= 9) break;
             try
             {
                 byte[] data = await Get(c.Value, 300000, false);
