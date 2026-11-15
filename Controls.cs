@@ -18,6 +18,51 @@ class AccountIcon : Control
         SetStyle(ControlStyles.SupportsTransparentBackColor, true); BackColor = Color.Transparent;
     }
 
+    // Drag a tile onto another one to reorder (a plain click still opens the account).
+    public static AppDef DropTarget;
+    public static Action<AppDef, AppDef> Reorder;
+    Point downAt; bool downActive, dragging, justDragged;
+
+    protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { downAt = e.Location; downActive = true; } base.OnMouseDown(e); }
+
+    AppDef TargetAt(Point screen)
+    {
+        if (Parent == null) return null;
+        foreach (Control c in Parent.Controls)
+        {
+            AccountIcon t = c as AccountIcon;
+            if (t != null && t.Visible && t.RectangleToScreen(t.ClientRectangle).Contains(screen)) return t.App;
+        }
+        return null;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (!downActive) return;
+        if (!dragging && (Math.Abs(e.X - downAt.X) > 6 || Math.Abs(e.Y - downAt.Y) > 6)) { dragging = true; Capture = true; Cursor = Cursors.SizeAll; }
+        if (!dragging) return;
+        AppDef t = TargetAt(Control.MousePosition);
+        if (t != DropTarget)
+        {
+            AppDef old = DropTarget; DropTarget = t;
+            foreach (Control c in Parent.Controls) { AccountIcon i = c as AccountIcon; if (i != null && (i.App == old || i.App == t)) i.Invalidate(); }
+        }
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        downActive = false;
+        if (!dragging) return;
+        dragging = false; Capture = false; Cursor = Cursors.Hand; justDragged = true;
+        AppDef t = DropTarget; DropTarget = null;
+        if (Parent != null) foreach (Control c in Parent.Controls) c.Invalidate();
+        if (t != null && t != App && Reorder != null) Reorder(App, t);
+    }
+
+    protected override void OnClick(EventArgs e) { if (justDragged) { justDragged = false; return; } base.OnClick(e); }
+
     // Side bar with names (wide) or icons only.
     public static bool Wide { get { return Cfg.LeftNav && Cfg.RailWide; } }
 
@@ -86,6 +131,8 @@ class AccountIcon : Control
             using (Brush lb = new SolidBrush(Pal.Card)) g.FillEllipse(lb, r.X - 4, r.Bottom - 10, 14, 14);
             using (Font lf = new Font("Segoe MDL2 Assets", 7f)) TextRenderer.DrawText(g, "", lf, new Point(r.X - 3, r.Bottom - 8), Pal.Text);
         }
+        if (DropTarget == App)
+            using (GraphicsPath dp = Rounded(new Rectangle(2, 2, Width - 5, Height - 5), 13)) using (Pen dpen = new Pen(Pal.BrandInk, 2.5f)) g.DrawPath(dpen, dp);
         if (Wide)
             using (Font nf = new Font("Segoe UI", 10f, Selected ? FontStyle.Bold : FontStyle.Regular))
                 TextRenderer.DrawText(g, App.Name, nf, new Rectangle(58, 0, Width - 58 - (App.Unread > 0 && Cfg.BadgeList && App.Badge ? 46 : 12), Height), Pal.Text,

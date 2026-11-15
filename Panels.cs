@@ -106,7 +106,23 @@ class SettingsPanel : Panel
         foreach (AppDef a in m.Apps)
         {
             AppDef acc = a;
-            NavButton(a.Name, y, page == a.Id, delegate { Go(acc.Id); }).Width = reorder ? 140 : 194;
+            bool[] st = new bool[2];   // [0] dragging, [1] just dragged (swallow the click)
+            int[] downY = new int[1];
+            Button nb = NavButton(a.Name, y, page == a.Id, delegate { if (st[1]) { st[1] = false; return; } Go(acc.Id); });
+            nb.Width = reorder ? 140 : 194;
+            if (reorder)
+            {   // drag a row up or down; 40 px = one place
+                nb.MouseDown += delegate(object s, MouseEventArgs e) { downY[0] = e.Y; st[0] = false; };
+                nb.MouseMove += delegate(object s, MouseEventArgs e) { if (e.Button == MouseButtons.Left && Math.Abs(e.Y - downY[0]) > 6) { st[0] = true; nb.Cursor = Cursors.SizeAll; } };
+                nb.MouseUp += delegate(object s, MouseEventArgs e)
+                {
+                    nb.Cursor = Cursors.Hand;
+                    if (!st[0]) return;
+                    st[0] = false; st[1] = true;
+                    int delta = (int)Math.Round((e.Y - downY[0]) / 40.0);
+                    if (delta != 0) { m.MoveApp(acc, delta); BeginInvoke(new Action(Build)); }
+                };
+            }
             if (reorder)
             {
                 Button up = Ui.Btn("▲", 24, delegate { m.MoveApp(acc, -1); Build(); }); up.SetBounds(150, y + 5, 24, 28);

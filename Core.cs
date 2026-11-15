@@ -231,6 +231,53 @@ static class Icons
         return m.Success ? (m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value) : "";
     }
 
+    // Icons that ship with the program (assets\services\<host>.png). They show instantly and offline; the live icon replaces them when it is fetched.
+    public static string BundledPath(string url)
+    {
+        Uri u;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out u)) return null;
+        string host = u.Host.StartsWith("www.") ? u.Host.Substring(4) : u.Host;
+        string b = AppDomain.CurrentDomain.BaseDirectory;
+        foreach (string root in new string[] { b, Path.GetFullPath(Path.Combine(b, "..")) })
+        {
+            string p = Path.Combine(root, "assets", "services", host + ".png");
+            if (File.Exists(p)) return p;
+        }
+        return null;
+    }
+
+    // Most web apps list large PNG icons in their manifest (192/512 px), much sharper than the favicon.
+    static async System.Threading.Tasks.Task<List<KeyValuePair<int, Uri>>> ManifestIcons(Uri page, string html)
+    {
+        List<KeyValuePair<int, Uri>> list = new List<KeyValuePair<int, Uri>>();
+        if (html == null) return list;
+        foreach (Match m in Regex.Matches(html, @"<link\b[^>]*>", RegexOptions.IgnoreCase))
+        {
+            if (Attr(m.Value, "rel").ToLower().IndexOf("manifest") < 0) continue;
+            Uri mu;
+            if (!Uri.TryCreate(page, Attr(m.Value, "href"), out mu) || !IsPublicHttps(mu)) continue;
+            try
+            {
+                byte[] b = await Get(mu, 100000, false);
+                if (b == null) break;
+                foreach (Match o in Regex.Matches(Encoding.UTF8.GetString(b), @"\{[^{}]*""src""[^{}]*\}"))
+                {
+                    string src = Regex.Match(o.Value, @"""src""\s*:\s*""([^""]+)""").Groups[1].Value.Replace("\\/", "/");
+                    int size = 0;
+                    Match sz = Regex.Match(o.Value, @"""sizes""\s*:\s*""(\d+)x\d+""");
+                    if (sz.Success) int.TryParse(sz.Groups[1].Value, out size);
+                    string low = src.ToLower();
+                    if (src.Length == 0 || low.EndsWith(".svg") || low.EndsWith(".webp") || low.StartsWith("data:")) continue;
+                    Uri iu;
+                    if (Uri.TryCreate(mu, src, out iu) && IsPublicHttps(iu)) list.Add(new KeyValuePair<int, Uri>(700 + Math.Min(size, 512), iu));
+                }
+            }
+            catch (Exception) { }
+            break;
+        }
+        return list;
+    }
+
     public static async System.Threading.Tasks.Task<Bitmap> Fetch(string pageUrl, string declared)
     {
         Uri page;
@@ -243,9 +290,12 @@ static class Icons
         }
         catch (Exception) { }   // no page: still try /favicon.ico
         int tried = 0;
-        foreach (KeyValuePair<int, Uri> c in Candidates(page, html, declared))
+        List<KeyValuePair<int, Uri>> cands = Candidates(page, html, declared);
+        cands.AddRange(await ManifestIcons(page, html));
+        cands.Sort(delegate(KeyValuePair<int, Uri> a, KeyValuePair<int, Uri> b) { return b.Key.CompareTo(a.Key); });
+        foreach (KeyValuePair<int, Uri> c in cands)
         {
-            if (tried++ >= 4) break;
+            if (tried++ >= 5) break;
             try
             {
                 byte[] data = await Get(c.Value, 300000, false);

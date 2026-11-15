@@ -21,7 +21,7 @@ and gigabytes of memory. LiteHub is built the other way around:
 ## Features
 
 - 98 ready services in 11 categories (messaging, meetings, social, email, office and files, productivity, developer, business and ads, AI, music and video, learning) plus any website by address.
-- Real platform icons, fetched from the platform's own site; accounts of one platform get colored rings so you can tell them apart.
+- Real platform icons: 77 ship with the program (`assets\services`, made by `LiteHub.exe --fetch-icons assets\services`) so they show instantly and offline; each account re-checks its site once a week, so a new vendor logo replaces ours (a much smaller one never does). accounts of one platform get colored rings so you can tell them apart.
 - Windows notifications, unread counts on each icon and on the taskbar button.
 - Downloads go to the folder you choose (global or per account), with a list and a "finished" notice.
 - Settings: theme (system, light, dark), top or left navigation, per-account color/icon/notifications/download folder, start with Windows, global shortcut (default Alt+E), passcode on launch.

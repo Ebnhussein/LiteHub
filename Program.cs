@@ -126,6 +126,7 @@ class MainForm : Form
         top.Controls.Add(gridBtn);
         top.Controls.Add(tab);
         top.Controls.Add(logo);
+        AccountIcon.Reorder = delegate(AppDef from, AppDef to) { MoveApp(from, apps.IndexOf(to) - apps.IndexOf(from)); };   // drag a tile onto another
         foreach (AppDef a in apps) AddIcon(a);
         RefreshSiblings();
         ApplyLayout();
@@ -332,8 +333,9 @@ class MainForm : Form
         m.Items.Add(another); m.Items.Add(wsm); m.Items.Add(side); m.Items.Add(reload); m.Items.Add(set); m.Items.Add(remove);
         b.ContextMenuStrip = m;
         a.Btn = b;
-        string png = IconFile(a);
+        string png = IconFile(a), bundled = Icons.BundledPath(a.Url);
         if (File.Exists(png)) try { a.Icon = LoadCopy(png); } catch (Exception) { }
+        if (a.Icon == null && bundled != null) try { a.Icon = LoadCopy(bundled); } catch (Exception) { }
         if (a.Icon != null && a.Icon.Width < 32) { a.Icon.Dispose(); a.Icon = null; }   // tiny old icon: fetch a better one
         icons.Controls.Add(b);
     }
@@ -1353,7 +1355,15 @@ class MainForm : Form
         try
         {
             Bitmap b = await Icons.Fetch(a.Url, declared);
+            if (b == null && a.Icon == null)
+            {   // offline or blocked: fall back to the icon that ships with the program
+                string bp = Icons.BundledPath(a.Url);
+                if (bp != null) try { a.Icon = LoadCopy(bp); a.Btn.Invalidate(); } catch (Exception) { }
+            }
             if (b == null || !apps.Contains(a)) return;
+            // a vendor logo change replaces ours; a much smaller fetch (a 16 px favicon) never replaces a sharper one
+            if (a.Icon != null && !iconForce.Contains(a) && b.Width < a.Icon.Width * 3 / 4) { b.Dispose(); if (File.Exists(IconFile(a))) File.SetLastWriteTime(IconFile(a), DateTime.Now); return; }
+            iconForce.Remove(a);
             Image old = a.Icon;
             a.Icon = b;
             b.Save(IconFile(a), System.Drawing.Imaging.ImageFormat.Png);
@@ -1365,12 +1375,20 @@ class MainForm : Form
         finally { a.IconBusy = false; }
     }
 
-    // Accounts without an icon (first run, new account) get one, one at a time.
+    readonly List<AppDef> iconForce = new List<AppDef>();   // "Refresh icon" button: accept whatever the site serves
+
+    bool IconStale(AppDef a)
+    {
+        string f = IconFile(a);
+        return !File.Exists(f) || (DateTime.Now - File.GetLastWriteTime(f)).TotalDays > 7;
+    }
+
+    // Accounts without a live icon, or with one older than a week, ask their site again (one at a time), so a new vendor logo shows up.
     async void FetchMissingIcons()
     {
         foreach (AppDef a in apps.ToArray())
         {
-            if (a.Icon != null || !apps.Contains(a)) continue;
+            if (!apps.Contains(a) || (a.Icon != null && !IconStale(a))) continue;
             SetIcon(a, null);
             await Task.Delay(1500);
         }
@@ -1378,9 +1396,7 @@ class MainForm : Form
 
     public void RefreshIcon(AppDef a)
     {
-        try { File.Delete(IconFile(a)); } catch (Exception) { }
-        if (a.Icon != null) { a.Icon.Dispose(); a.Icon = null; }
-        a.Btn.Invalidate();
+        iconForce.Add(a);
         SetIcon(a, null);
     }
     // Titles like "(3) WhatsApp" or "Inbox (781) - ..." -> unread count on the account icon and the taskbar.
@@ -1437,6 +1453,36 @@ class MainForm : Form
         v.Dispose();
     }
 
+    // Build-time: LiteHub.exe --fetch-icons assets\services  downloads every catalog icon so the release ships with them.
+    static int FetchIconsCli(string[] args)
+    {
+        int fi = Array.IndexOf(args, "--fetch-icons");
+        string dir = fi + 1 < args.Length ? args[fi + 1] : @"assets\services";
+        Directory.CreateDirectory(dir);
+        StringBuilder report = new StringBuilder();
+        List<string> done = new List<string>();
+        foreach (Service s in Catalog.All)
+        {
+            Uri u;
+            if (s.IsTemplate || !Uri.TryCreate(s.Url, UriKind.Absolute, out u)) continue;
+            string host = u.Host.StartsWith("www.") ? u.Host.Substring(4) : u.Host;
+            if (done.Contains(host)) continue;
+            done.Add(host);
+            try
+            {
+                Bitmap b = Icons.Fetch(s.Url, null).Result;
+                if (b == null) { report.AppendLine("none   " + s.Name + " " + host); continue; }
+                int w = b.Width;
+                if (b.Width > 256) { Bitmap r = new Bitmap(256, 256); using (Graphics g = Graphics.FromImage(r)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(b, 0, 0, 256, 256); } b.Dispose(); b = r; }
+                b.Save(Path.Combine(dir, host + ".png"), System.Drawing.Imaging.ImageFormat.Png); b.Dispose();
+                report.AppendLine(w.ToString().PadLeft(4) + "px " + s.Name + " " + host);
+            }
+            catch (Exception ex) { report.AppendLine("error  " + s.Name + " " + host + ": " + ex.GetBaseException().Message); }
+        }
+        File.WriteAllText(Path.Combine(dir, "_report.txt"), report.ToString());
+        return 0;
+    }
+
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
 
     [STAThread]
@@ -1445,6 +1491,7 @@ class MainForm : Form
         if (Array.IndexOf(args, "--selftest") >= 0) Environment.Exit(Util.SelfTest() ? 0 : 1);
         ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;   // TLS 1.2 on older .NET
         SetProcessDPIAware();
+        if (Array.IndexOf(args, "--fetch-icons") >= 0) Environment.Exit(FetchIconsCli(args));
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         bool warned = false;
         Application.ThreadException += delegate(object s, System.Threading.ThreadExceptionEventArgs e)
