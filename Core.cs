@@ -23,7 +23,8 @@ class AppDef
     public DateTime LastUsed = DateTime.Now;
     public int Unread;
     public bool IconBusy, HasSibling;
-    public DateTime LastCrash = DateTime.MinValue;
+    public DateTime LastCrash = DateTime.MinValue, LastNotified = DateTime.MinValue, Started = DateTime.MinValue;
+    public bool IconPlaceholder;             // the icon is a drawn stand-in, any real one replaces it
     public bool Running { get { return View != null; } }
 
     public Color AccentColor
@@ -235,6 +236,8 @@ static class Icons
     }
 
     // Icons that ship with the program (assets\services\<host>.png). They show instantly and offline; the live icon replaces them when it is fetched.
+    public static bool IsGenerated(string path) { return path != null && path.IndexOf("generated") >= 0; }
+
     public static string BundledPath(string url)
     {
         Uri u;
@@ -243,8 +246,11 @@ static class Icons
         string b = AppDomain.CurrentDomain.BaseDirectory;
         foreach (string root in new string[] { b, Path.GetFullPath(Path.Combine(b, "..")) })
         {
-            string p = Path.Combine(root, "assets", "services", host + ".png");
-            if (File.Exists(p)) return p;
+            foreach (string sub in new string[] { "services", Path.Combine("services", "generated") })
+            {   // real icons first, drawn stand-ins (tools\make-generated-icons.ps1) last
+                string p = Path.Combine(root, "assets", sub, host + ".png");
+                if (File.Exists(p)) return p;
+            }
         }
         return null;
     }

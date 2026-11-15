@@ -335,7 +335,7 @@ class MainForm : Form
         a.Btn = b;
         string png = IconFile(a), bundled = Icons.BundledPath(a.Url);
         if (File.Exists(png)) try { a.Icon = LoadCopy(png); } catch (Exception) { }
-        if (a.Icon == null && bundled != null) try { a.Icon = LoadCopy(bundled); } catch (Exception) { }
+        if (a.Icon == null && bundled != null) try { a.Icon = LoadCopy(bundled); a.IconPlaceholder = Icons.IsGenerated(bundled); } catch (Exception) { }
         if (a.Icon != null && a.Icon.Width < 32) { a.Icon.Dispose(); a.Icon = null; }   // tiny old icon: fetch a better one
         icons.Controls.Add(b);
     }
@@ -1029,6 +1029,7 @@ class MainForm : Form
         m.Items.Add(exit);
         tray.ContextMenuStrip = m;
         tray.DoubleClick += delegate { Restore(); };
+        tray.BalloonTipClicked += delegate { Restore(); if (balloonApp != null && apps.Contains(balloonApp)) ShowApp(balloonApp); };
         tray.Visible = true;
     }
 
@@ -1222,7 +1223,7 @@ class MainForm : Form
         v.Dock = DockStyle.Fill;
         v.Visible = show;
         v.DefaultBackgroundColor = Pal.Page;
-        a.View = v;
+        a.View = v; a.Started = DateTime.Now;
         host.Controls.Add(v);
         if (split.Contains(a)) ArrangeSplit();
         if (overlay != null) overlay.BringToFront();
@@ -1254,6 +1255,7 @@ class MainForm : Form
             {   // the system toast still shows; this only keeps a copy for the Inbox
                 string nt = e.Notification.Title, nb = e.Notification.Body;
                 NLog(a.Name + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
+                a.LastNotified = DateTime.Now;
                 if (a.Locked) { nt = ""; nb = Loc.T("New message"); }
                 if (Cfg.DndActive || a.Locked) e.Handled = true;   // no pop-up; a locked account never shows its text
                 if (a.Locked && !Cfg.DndActive) tray.ShowBalloonTip(3000, a.Name, Loc.T("New message"), ToolTipIcon.Info);
@@ -1358,12 +1360,12 @@ class MainForm : Form
             if (b == null && a.Icon == null)
             {   // offline or blocked: fall back to the icon that ships with the program
                 string bp = Icons.BundledPath(a.Url);
-                if (bp != null) try { a.Icon = LoadCopy(bp); a.Btn.Invalidate(); } catch (Exception) { }
+                if (bp != null) try { a.Icon = LoadCopy(bp); a.IconPlaceholder = Icons.IsGenerated(bp); a.Btn.Invalidate(); } catch (Exception) { }
             }
             if (b == null || !apps.Contains(a)) return;
             // a vendor logo change replaces ours; a much smaller fetch (a 16 px favicon) never replaces a sharper one
-            if (a.Icon != null && !iconForce.Contains(a) && b.Width < a.Icon.Width * 3 / 4) { b.Dispose(); if (File.Exists(IconFile(a))) File.SetLastWriteTime(IconFile(a), DateTime.Now); return; }
-            iconForce.Remove(a);
+            if (a.Icon != null && !a.IconPlaceholder && !iconForce.Contains(a) && b.Width < a.Icon.Width * 3 / 4) { b.Dispose(); if (File.Exists(IconFile(a))) File.SetLastWriteTime(IconFile(a), DateTime.Now); return; }
+            iconForce.Remove(a); a.IconPlaceholder = false;
             Image old = a.Icon;
             a.Icon = b;
             b.Save(IconFile(a), System.Drawing.Imaging.ImageFormat.Png);
@@ -1402,9 +1404,29 @@ class MainForm : Form
     // Titles like "(3) WhatsApp" or "Inbox (781) - ..." -> unread count on the account icon and the taskbar.
     void UpdateBadge(AppDef a, string title)
     {
+        int before = a.Unread;
         a.Unread = Util.ParseUnread(title);
+        if (a.Unread > before && (DateTime.Now - a.Started).TotalSeconds > 20) NoteUnread(a, a.Unread - before);
         a.Btn.Invalidate();
         UpdateTaskbar();
+    }
+
+    AppDef balloonApp;
+
+    // The unread count went up. Many web apps notify through a service worker, which WebView2 does not hand to us, so this is the fallback:
+    // put it in the Inbox and, if nobody is looking at the account and no real notification just covered it, show a toast.
+    void NoteUnread(AppDef a, int n)
+    {
+        bool looking = a == active && Visible && overlay == null && WindowState != FormWindowState.Minimized && ActiveForm == this;
+        bool covered = (DateTime.Now - a.LastNotified).TotalSeconds < 8;
+        NLog(a.Name + ": unread +" + n + " (looking " + looking + ", covered by a notification " + covered + ")");
+        if (looking || covered) return;
+        AddInbox(a, a.Locked ? "" : Loc.T("New messages"), Loc.F("{0} new", n));
+        if (Cfg.Notify && a.Notify && !Cfg.DndActive)
+        {
+            balloonApp = a;
+            tray.ShowBalloonTip(4000, a.Name, a.Locked ? Loc.T("New message") : Loc.F("{0} new", n), ToolTipIcon.Info);
+        }
     }
 
     void Sweep()
