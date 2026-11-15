@@ -828,9 +828,10 @@ class MainForm : Form
 
     public void RemoveApp(AppDef a)
     {
-        if (MessageBox.Show(this, Loc.F("Remove {0}? (its saved login stays on disk)", a.Name), "LiteHub",
-            MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+        if (MessageBox.Show(this, Loc.F("Remove {0}?", a.Name), "LiteHub", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+        bool wipe = MessageBox.Show(this, Loc.T("Also delete its saved login and data from this PC?"), "LiteHub", MessageBoxButtons.YesNo) == DialogResult.Yes;
         if (a.View != null) { host.Controls.Remove(a.View); a.View.Dispose(); a.View = null; }
+        if (wipe) WipeAccount(a);
         apps.Remove(a);
         Inbox.RemoveAll(delegate(InboxItem i) { return i.App == a; }); InboxRefresh();
         icons.Controls.Remove(a.Btn);
@@ -845,6 +846,20 @@ class MainForm : Form
         SaveApps();
         UpdateTaskbar();
         ShowSettings("General");
+    }
+
+    // Delete one account's browser profile and icon. The browser may still hold the files for a moment, so retry a few times.
+    void WipeAccount(AppDef a)
+    {
+        string prof = Path.Combine(Paths.Data, "profiles", "EBWebView", "WV2Profile_" + Util.ProfileName(a.Id)), icon = IconFile(a);
+        Task.Run(async delegate
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                try { if (Directory.Exists(prof)) Directory.Delete(prof, true); if (File.Exists(icon)) File.Delete(icon); return; }
+                catch (Exception) { await Task.Delay(1500); }
+            }
+        });
     }
 
     public void MoveApp(AppDef a, int delta)
@@ -971,7 +986,17 @@ class MainForm : Form
         open.Click += delegate { Restore(); };
         ToolStripMenuItem exit = new ToolStripMenuItem(Loc.T("Exit"));
         exit.Click += delegate { reallyExit = true; Close(); };
+        ToolStripMenuItem inbox = new ToolStripMenuItem(Loc.T("Inbox"));
+        inbox.Click += delegate { Restore(); ShowOverlay(new InboxPanel(this), "Inbox"); };
+        ToolStripMenuItem dndOn = new ToolStripMenuItem(Loc.F("Do not disturb: {0}", Loc.T("1 hour")));
+        dndOn.Click += delegate { SetDnd(60); };
+        ToolStripMenuItem dndOff = new ToolStripMenuItem(Loc.F("Do not disturb: {0}", Loc.T("Off")));
+        dndOff.Click += delegate { SetDnd(0); };
         m.Items.Add(open);
+        m.Items.Add(inbox);
+        m.Items.Add(dndOn);
+        m.Items.Add(dndOff);
+        m.Items.Add(new ToolStripSeparator());
         m.Items.Add(exit);
         tray.ContextMenuStrip = m;
         tray.DoubleClick += delegate { Restore(); };
@@ -982,7 +1007,7 @@ class MainForm : Form
     {
         if (locked)
         {
-            if (!Unlock()) return;
+            if (!Unlock(false)) return;
             locked = false;
         }
         ShowInTaskbar = true;
@@ -999,14 +1024,41 @@ class MainForm : Form
         Hide();
     }
 
-    public static bool Unlock()
+    // Launch lock. "Forgot passcode?" removes the passcode but also signs out of every account (the saved logins are
+    // what the passcode protects), so a forgotten passcode can never be used to get at someone''s logins.
+    public static bool Unlock(bool allowReset)
     {
         while (true)
         {
-            string p = Dialogs.Ask("LiteHub", "Enter your passcode", "", true);
+            string p = allowReset ? Dialogs.AskPass("LiteHub", "Enter your passcode") : Dialogs.Ask("LiteHub", "Enter your passcode", "", true);
             if (p == null) return false;
+            if (p == Dialogs.Reset)
+            {
+                if (MessageBox.Show(Loc.T("This removes the passcode and signs you out of every account. Your account list stays. Continue?"), "LiteHub",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) continue;
+                Cfg.SetPass(null); Cfg.Save();
+                File.WriteAllText(ResetMarker, "1");
+                WipeLogins();
+                MessageBox.Show(Loc.T("Passcode removed. Sign in again to each account."), "LiteHub");
+                return true;
+            }
             if (Cfg.CheckPass(p)) return true;
         }
+    }
+
+    static string ResetMarker { get { return Path.Combine(Paths.Data, "reset.pending"); } }
+
+    // Deletes every saved login (browser profiles) and the inbox; the marker stays until it all worked, then it is retried at the next start.
+    static void WipeLogins()
+    {
+        try
+        {
+            string prof = Path.Combine(Paths.Data, "profiles");
+            if (Directory.Exists(prof)) Directory.Delete(prof, true);
+            if (File.Exists(Paths.Inbox)) File.Delete(Paths.Inbox);
+            File.Delete(ResetMarker);
+        }
+        catch (Exception) { }   // files still in use: reset.pending stays and the wipe is tried again at the next start
     }
 
     public void ApplyStartup()
@@ -1386,7 +1438,8 @@ class MainForm : Form
             Cfg.Load(); Loc.Set(Cfg.Lang);
             Pal.Update();
             bool bg = Array.IndexOf(args, "--background") >= 0;
-            if (Cfg.HasPass && !bg && !Unlock()) return;
+            if (File.Exists(ResetMarker)) WipeLogins();
+            if (Cfg.HasPass && !bg && !Unlock(true)) return;
             Application.Run(new MainForm(bg));
         }
     }

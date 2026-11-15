@@ -43,7 +43,7 @@ and gigabytes of memory. LiteHub is built the other way around:
 3. Needs (Windows 10/11 with the Microsoft Edge WebView2 Runtime, which Windows already has.)
 4. The program is not code-signed yet, so Windows SmartScreen may warn the first time: **More info, Run anyway**.
 
-Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub`. Delete that folder to reset everything.
+Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub`. Delete that folder to reset everything. Removing an account asks whether to delete its saved login too. If you forget the launch passcode, "Forgot passcode?" removes it and signs you out of every account (the passcode protects those logins, so it cannot be bypassed without losing them).
 
 ## Privacy
 

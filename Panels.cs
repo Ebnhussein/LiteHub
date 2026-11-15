@@ -384,7 +384,7 @@ class SettingsPanel : Panel
         Heading("Manage account");
         Button rm = Ui.Btn("Remove", 90, delegate { m.RemoveApp(a); });
         rm.BackColor = Color.FromArgb(120, 40, 40); rm.ForeColor = Color.White;
-        Panel rr = Ui.Row(w, "Remove account", "Its saved login stays on disk until you delete the profile folder", rm);
+        Panel rr = Ui.Row(w, "Remove account", "Optionally deletes its saved login and data too", rm);
         rr.BackColor = Pal.Dark ? Color.FromArgb(60, 35, 35) : Color.FromArgb(250, 225, 225);
         Add(rr);
     }

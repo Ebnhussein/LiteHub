@@ -258,6 +258,25 @@ static class Dialogs
         return f;
     }
 
+    public const string Reset = "@@RESET@@";
+
+    // Passcode box for the launch lock: like Ask, plus a "Forgot passcode?" button that returns Reset.
+    public static string AskPass(string title, string label)
+    {
+        using (Form f = Make(title, 380, 130))
+        {
+            Label l = new Label(); l.Text = Loc.T(label); l.SetBounds(14, 12, 350, 20);
+            TextBox t = Ui.Edit("", 350); t.SetBounds(14, 38, 350, 26); t.UseSystemPasswordChar = true;
+            Button ok = Ui.Btn("OK", 80, null); ok.DialogResult = DialogResult.OK; ok.Location = new Point(204, 84);
+            Button cancel = Ui.Btn("Cancel", 80, null); cancel.DialogResult = DialogResult.Cancel; cancel.Location = new Point(290, 84);
+            Button forgot = Ui.Btn("Forgot passcode?", 150, null); forgot.BackColor = Color.Transparent; forgot.ForeColor = Pal.Sub; forgot.DialogResult = DialogResult.Abort; forgot.Location = new Point(10, 84);
+            f.Controls.AddRange(new Control[] { l, t, ok, cancel, forgot });
+            f.AcceptButton = ok; f.CancelButton = cancel;
+            DialogResult r = f.ShowDialog();
+            return r == DialogResult.OK ? t.Text : r == DialogResult.Abort ? Reset : null;
+        }
+    }
+
     // Returns the typed text, or null if cancelled.
     public static string Ask(string title, string label, string initial, bool secret)
     {
