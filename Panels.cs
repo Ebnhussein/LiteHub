@@ -197,8 +197,13 @@ class SettingsPanel : Panel
             Ui.Combo(new string[] { "System", "Light", "Dark" }, Cfg.Theme, 150,
                 delegate(object s, EventArgs e) { Cfg.Theme = ((ComboBox)s).SelectedIndex; Cfg.Save(); m.ApplyTheme(); Build(); })));
         Add(Ui.Row(w, "App layout", "Account icons on the top bar or on the left",
-            Ui.Combo(new string[] { "Top navigation", "Left navigation" }, Cfg.LeftNav ? 1 : 0, 170,
-                delegate(object s, EventArgs e) { Cfg.LeftNav = ((ComboBox)s).SelectedIndex == 1; Cfg.Save(); m.ApplyLayout(); })));
+            Ui.Combo(new string[] { "Top navigation", "Side bar with names", "Side bar, icons only" }, !Cfg.LeftNav ? 0 : Cfg.RailWide ? 1 : 2, 190,
+                delegate(object s, EventArgs e)
+                {
+                    int k = ((ComboBox)s).SelectedIndex;
+                    Cfg.LeftNav = k != 0; if (k != 0) Cfg.RailWide = k == 1;
+                    Cfg.Save(); m.ApplyLayout();
+                })));
         Add(Ui.Row(w, "Colorful menus", "Show the selected account's color on the top bar",
             Ui.Switch(Cfg.Colorful, delegate(object s, EventArgs e) { Cfg.Colorful = ((Toggle)s).Checked; Cfg.Save(); m.ApplyTheme(); })));
     }
@@ -397,6 +402,7 @@ class SettingsPanel : Panel
             new string[] { "Ctrl+K", "Search accounts and actions" },
             new string[] { "Ctrl+1 ... Ctrl+9", "Jump to account 1-9" },
             new string[] { "Ctrl+Tab / Ctrl+Shift+Tab", "Next / previous account" },
+            new string[] { "Ctrl+B", "Expand or collapse the side bar" },
             new string[] { Cfg.Hotkey, "Open or hide LiteHub" },
             new string[] { "Esc", "Close the search or a pop-up" } };
         foreach (string[] r in rows)

@@ -30,6 +30,10 @@ class MainForm : Form
     readonly Panel strip = new Panel();
     readonly Panel railHead = new ClearPanel();
     Button wsBtn;
+    readonly IconHost iconHost = new IconHost();
+    Label railTitle;
+    RoundButton railToggle;
+    PictureBox railLogo;
     readonly Panel tab = new Panel();
     readonly Panel tools = new ClearPanel();
     readonly Button[] toolBtns = new Button[5];
@@ -127,7 +131,7 @@ class MainForm : Form
         ApplyLayout();
 
         SetupTray();
-        showEvt = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, "LiteHub.show");
+        showEvt = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, "LiteHub.show" + Paths.Tag);
         System.Threading.ThreadPool.RegisterWaitForSingleObject(showEvt,
             delegate { if (IsHandleCreated) BeginInvoke(new Action(Restore)); }, null, -1, false);
 
@@ -169,55 +173,74 @@ class MainForm : Form
     // Show only the icons that fit; the grid button lists every account.
     void LayoutIcons()
     {
-        int fit = Cfg.LeftNav ? (ClientSize.Height - 92 - 220 - 10) / 48 : (ClientSize.Width - 352 - 214 - 16) / 54;
-        fit = Math.Max(0, fit);
+        int fit = Cfg.LeftNav ? int.MaxValue : Math.Max(0, (ClientSize.Width - 352 - 214 - 16) / 54);
         int shown = 0;
         foreach (AppDef a in apps)
             if (a.Btn != null) a.Btn.Visible = InWs(a) && shown++ < fit;
+        iconHost.ScrollBy(0);
+    }
+
+    // Icon size and spacing for the current layout (side bar with names, icons only, or top bar).
+    void StyleIcon(AppDef a)
+    {
+        a.Btn.Margin = Cfg.LeftNav ? new Padding(6, 0, 6, 0) : new Padding(1, 0, 1, 0);
+        a.Btn.Size = new Size(AccountIcon.Wide ? 220 : 52, 48);
+        a.Btn.Invalidate();
     }
 
     public void ApplyLayout()
     {
-        bool left = Cfg.LeftNav;
+        bool left = Cfg.LeftNav, wide = AccountIcon.Wide;
         leftBar.Visible = left; top.Visible = !left; strip.Visible = !left;
         if (railHead.Controls.Count == 0)
         {
-            railHead.Dock = DockStyle.Top; railHead.Height = 92; railHead.Cursor = Cursors.Hand;
-            wsBtn = new RoundButton(); wsBtn.SetBounds(8, 56, 48, 24); wsBtn.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+            railHead.Dock = DockStyle.Top; railHead.Cursor = Cursors.Hand;
+            wsBtn = new RoundButton(); wsBtn.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
             wsBtn.Text = Cfg.Workspace == "" ? Loc.T("All") : Cfg.Workspace; wsBtn.Cursor = Cursors.Hand; wsBtn.BackColor = Pal.Card; wsBtn.ForeColor = Pal.Text;
             wsBtn.Click += delegate { WorkspaceMenu(wsBtn); };
             tip.SetToolTip(wsBtn, Loc.T("Workspace"));
-            railHead.Controls.Add(wsBtn);
-            PictureBox rl = new PictureBox(); rl.SetBounds(16, 14, 32, 32); rl.SizeMode = PictureBoxSizeMode.Zoom;
-            rl.Image = new Icon(AppIcon, 32, 32).ToBitmap(); rl.BackColor = Color.Transparent; rl.Cursor = Cursors.Hand;
-            rl.Click += delegate { OpenPalette(); }; railHead.Click += delegate { OpenPalette(); };
-            tip.SetToolTip(rl, Loc.T("Search accounts and actions") + "  (Ctrl+K)");
-            railHead.Controls.Add(rl);
+            railLogo = new PictureBox(); railLogo.SizeMode = PictureBoxSizeMode.Zoom;
+            railLogo.Image = new Icon(AppIcon, 32, 32).ToBitmap(); railLogo.BackColor = Color.Transparent; railLogo.Cursor = Cursors.Hand;
+            railLogo.Click += delegate { OpenPalette(); }; railHead.Click += delegate { OpenPalette(); };
+            tip.SetToolTip(railLogo, Loc.T("Search accounts and actions") + "  (Ctrl+K)");
+            railTitle = new Label(); railTitle.Text = "LiteHub"; railTitle.Font = new Font("Segoe UI Semibold", 13f); railTitle.AutoSize = true;
+            railTitle.BackColor = Color.Transparent; railTitle.Cursor = Cursors.Hand; railTitle.Click += delegate { OpenPalette(); };
+            railToggle = new RoundButton(); railToggle.Font = new Font("Segoe MDL2 Assets", 11f); railToggle.Text = ""; railToggle.BackColor = Color.Transparent;
+            railToggle.Cursor = Cursors.Hand; railToggle.Size = new Size(36, 28);
+            railToggle.Click += delegate { ToggleRail(); };
+            tip.SetToolTip(railToggle, Loc.T("Expand or collapse the side bar (Ctrl+B)"));
+            railHead.Controls.AddRange(new Control[] { railLogo, railTitle, railToggle, wsBtn });
         }
-        leftBar.Controls.Remove(railHead);
-        top.Controls.Remove(icons); top.Controls.Remove(tools);
-        leftBar.Controls.Remove(icons); leftBar.Controls.Remove(tools);
+        leftBar.Width = wide ? 232 : 64;
+        railHead.Height = wide ? 92 : 112;
+        railLogo.SetBounds(16, 10, 32, 32);
+        railTitle.Visible = wide; railTitle.Location = new Point(56, 14);
+        railToggle.Location = wide ? new Point(188, 12) : new Point(14, 78);
+        wsBtn.SetBounds(8, wide ? 56 : 48, wide ? 216 : 48, 24);
+        leftBar.Controls.Remove(railHead); leftBar.Controls.Remove(iconHost); leftBar.Controls.Remove(tools);
+        iconHost.Controls.Remove(icons); top.Controls.Remove(icons); top.Controls.Remove(tools);
+        int[] order = { 4, 0, 1, 2, 3 };   // inbox bell first
         if (left)
         {
-            icons.FlowDirection = FlowDirection.TopDown; icons.Dock = DockStyle.Top; icons.Padding = new Padding(0, 6, 0, 0);
-            tools.Dock = DockStyle.Bottom; tools.Size = new Size(64, 220);
-            leftBar.Controls.Add(icons); leftBar.Controls.Add(railHead); leftBar.Controls.Add(tools);
-            int[] order = { 4, 0, 1, 2, 3 };   // inbox bell first
-            for (int i = 0; i < order.Length; i++) toolBtns[order[i]].Location = new Point(14, 6 + i * 42);
+            icons.FlowDirection = FlowDirection.TopDown; icons.Dock = DockStyle.None; icons.Padding = new Padding(0, 6, 0, 0); icons.Location = new Point(0, 0);
+            iconHost.Inner = icons; iconHost.Dock = DockStyle.Fill; iconHost.Controls.Add(icons);
+            tools.Dock = DockStyle.Bottom; tools.Size = wide ? new Size(232, 48) : new Size(64, 220);
+            leftBar.Controls.Add(iconHost); leftBar.Controls.Add(railHead); leftBar.Controls.Add(tools);
+            for (int i = 0; i < order.Length; i++) toolBtns[order[i]].Location = wide ? new Point(10 + i * 44, 6) : new Point(14, 6 + i * 42);
         }
         else
         {
             icons.FlowDirection = FlowDirection.LeftToRight; icons.Dock = DockStyle.Right; icons.Padding = new Padding(0, 2, 8, 0);
             tools.Dock = DockStyle.Right; tools.Size = new Size(214, 48);
             top.Controls.Add(icons); top.Controls.Add(tools);
-            int[] order = { 4, 0, 1, 2, 3 };
             for (int i = 0; i < order.Length; i++) toolBtns[order[i]].Location = new Point(4 + i * 42, 6);
         }
-        foreach (AppDef a in apps) a.Btn.Margin = left ? new Padding(6, 0, 6, 0) : new Padding(1, 0, 1, 0);
+        foreach (AppDef a in apps) StyleIcon(a);
         LayoutIcons();
         ApplyTheme();
     }
 
+    void ToggleRail() { Cfg.RailWide = !Cfg.RailWide; Cfg.Save(); ApplyLayout(); }
     public void ApplyTheme()
     {
         Pal.Update();
@@ -600,6 +623,7 @@ class MainForm : Form
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
         if (keyData == (Keys.Control | Keys.K)) { OpenPalette(); return true; }
+        if (keyData == (Keys.Control | Keys.B) && Cfg.LeftNav) { ToggleRail(); return true; }
         if (keyData == (Keys.Control | Keys.Tab)) { CycleAccount(1); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CycleAccount(-1); return true; }
         int n = (int)(keyData & Keys.KeyCode) - (int)Keys.D1;
@@ -818,7 +842,7 @@ class MainForm : Form
         a.Workspace = Cfg.Workspace;   // a new account lands in the workspace you are looking at
         apps.Add(a);
         AddIcon(a);
-        a.Btn.Margin = Cfg.LeftNav ? new Padding(6, 0, 6, 0) : new Padding(1, 0, 1, 0);
+        StyleIcon(a);
         RefreshSiblings();
         SetIcon(a, null);
         LayoutIcons();
@@ -1167,6 +1191,7 @@ class MainForm : Form
         active = a;
         a.LastUsed = DateTime.Now;
         foreach (AppDef x in apps) { x.Btn.Selected = (x == a); x.Btn.Invalidate(); }
+        iconHost.EnsureVisible(a.Btn);
         if (a.View == null) Start(a, true);
         else
         {
@@ -1217,6 +1242,7 @@ class MainForm : Form
                 if (e.KeyEventKind != CoreWebView2KeyEventKind.KeyDown || (Control.ModifierKeys & Keys.Control) == 0) return;
                 int k = (int)e.VirtualKey, n = k - (int)Keys.D1;
                 if (k == (int)Keys.K) { e.Handled = true; BeginInvoke(new Action(OpenPalette)); }
+                else if (k == (int)Keys.B && Cfg.LeftNav) { e.Handled = true; BeginInvoke(new Action(ToggleRail)); }
                 else if (k == (int)Keys.Tab) { e.Handled = true; int dir = (Control.ModifierKeys & Keys.Shift) != 0 ? -1 : 1; BeginInvoke(new Action(delegate { CycleAccount(dir); })); }
                 else if (n >= 0 && n < 9 && n < apps.Count) { e.Handled = true; BeginInvoke(new Action(delegate { ShowApp(apps[n]); })); }
             };
@@ -1428,11 +1454,11 @@ class MainForm : Form
         };
         Application.EnableVisualStyles();
         bool first;
-        using (System.Threading.Mutex one = new System.Threading.Mutex(true, "LiteHub.single", out first))
+        using (System.Threading.Mutex one = new System.Threading.Mutex(true, "LiteHub.single" + Paths.Tag, out first))
         {
             if (!first)
             {   // already running (maybe hidden in the tray): ask it to show itself
-                try { System.Threading.EventWaitHandle.OpenExisting("LiteHub.show").Set(); } catch (Exception) { }
+                try { System.Threading.EventWaitHandle.OpenExisting("LiteHub.show" + Paths.Tag).Set(); } catch (Exception) { }
                 return;
             }
             Directory.CreateDirectory(Paths.Data);

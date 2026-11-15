@@ -262,7 +262,10 @@ static class Icons
 // Paths used everywhere.
 static class Paths
 {
-    public static readonly string Data = Path.Combine(
+    // LITEHUB_DATA points a test run at a throw-away folder (and its own single-instance names), so tests never touch real accounts.
+    public static readonly string TestData = Environment.GetEnvironmentVariable("LITEHUB_DATA");
+    public static string Tag { get { return string.IsNullOrEmpty(TestData) ? "" : ".test"; } }
+    public static readonly string Data = !string.IsNullOrEmpty(TestData) ? TestData : Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LiteHub");
     public static string Apps { get { return Path.Combine(Data, "apps.txt"); } }
     public static string State { get { return Path.Combine(Data, "state.txt"); } }
@@ -280,7 +283,7 @@ static class Cfg
 {
     public static int Theme = 2;              // 0 system, 1 light, 2 dark
     public static int Startup;                // 0 off, 1 with Windows, 2 with Windows, hidden in the tray
-    public static bool LeftNav = true, Colorful, FilterDl, KeepInbox = true;
+    public static bool LeftNav = true, RailWide = true, Colorful, FilterDl, KeepInbox = true;
     public static bool Notify = true, BadgeList = true, BadgeTaskbar = true, HotkeyOn = true, CloseToTray = true;
     public static long DndUntil;
     public static int MemCapMB;
@@ -303,6 +306,7 @@ static class Cfg
                     case "Theme": Theme = Math.Max(0, Math.Min(2, n)); break;
                     case "Startup": Startup = Math.Max(0, Math.Min(2, n)); break;
                     case "LeftNav": LeftNav = b; break;
+                    case "RailWide": RailWide = b; break;
                     case "Colorful": Colorful = b; break;
                     case "FilterDl": FilterDl = b; break;
                     case "Notify": Notify = b; break;
@@ -330,7 +334,7 @@ static class Cfg
     {
         StringBuilder s = new StringBuilder();
         s.AppendLine("Theme=" + Theme); s.AppendLine("Startup=" + Startup);
-        s.AppendLine("LeftNav=" + B(LeftNav)); s.AppendLine("Colorful=" + B(Colorful)); s.AppendLine("FilterDl=" + B(FilterDl));
+        s.AppendLine("LeftNav=" + B(LeftNav)); s.AppendLine("RailWide=" + B(RailWide)); s.AppendLine("Colorful=" + B(Colorful)); s.AppendLine("FilterDl=" + B(FilterDl));
         s.AppendLine("Notify=" + B(Notify)); s.AppendLine("BadgeList=" + B(BadgeList)); s.AppendLine("BadgeTaskbar=" + B(BadgeTaskbar));
         s.AppendLine("HotkeyOn=" + B(HotkeyOn)); s.AppendLine("CloseToTray=" + B(CloseToTray));
         s.AppendLine("Lang=" + Lang); s.AppendLine("Workspace=" + Workspace.Replace("\r", "").Replace("\n", "")); s.AppendLine("KeepInbox=" + B(KeepInbox));

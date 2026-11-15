@@ -18,6 +18,17 @@ class AccountIcon : Control
         SetStyle(ControlStyles.SupportsTransparentBackColor, true); BackColor = Color.Transparent;
     }
 
+    // Side bar with names (wide) or icons only.
+    public static bool Wide { get { return Cfg.LeftNav && Cfg.RailWide; } }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        Control p = Parent;
+        while (p != null && !(p is IconHost)) p = p.Parent;
+        if (p != null) ((IconHost)p).ScrollBy(e.Delta / 2);
+        base.OnMouseWheel(e);
+    }
+
     protected override void OnMouseEnter(EventArgs e) { Hover = true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { Hover = false; Invalidate(); base.OnMouseLeave(e); }
 
@@ -38,7 +49,7 @@ class AccountIcon : Control
         Color bg = Pal.Bar;   // background comes from the parent (rail gradient)
         Rectangle r = new Rectangle(8, 6, 36, 36);
         if (Selected || Hover)
-            using (GraphicsPath hp = Rounded(new Rectangle(4, 2, 44, 44), 14))
+            using (GraphicsPath hp = Rounded(new Rectangle(4, 2, Wide ? Width - 8 : 44, 44), 14))
             using (Brush hb = new SolidBrush(Selected ? Pal.Blend(bg, App.AccentColor, 0.35) : Pal.Hover)) g.FillPath(hb, hp);
         if (Selected) using (Brush pb = new SolidBrush(Pal.Brand)) g.FillRectangle(pb, 0, 13, 3, 22);
         using (GraphicsPath p = Rounded(r, 11))
@@ -74,6 +85,10 @@ class AccountIcon : Control
             using (Brush lb = new SolidBrush(Pal.Card)) g.FillEllipse(lb, r.X - 4, r.Bottom - 10, 14, 14);
             using (Font lf = new Font("Segoe MDL2 Assets", 7f)) TextRenderer.DrawText(g, "", lf, new Point(r.X - 3, r.Bottom - 8), Pal.Text);
         }
+        if (Wide)
+            using (Font nf = new Font("Segoe UI", 10f, Selected ? FontStyle.Bold : FontStyle.Regular))
+                TextRenderer.DrawText(g, App.Name, nf, new Rectangle(58, 0, Width - 58 - (App.Unread > 0 && Cfg.BadgeList && App.Badge ? 46 : 12), Height), Pal.Text,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
         if (App.Unread > 0 && Cfg.BadgeList && App.Badge)
         {
             string t = App.Unread > 999 ? "999+" : App.Unread.ToString();
@@ -81,7 +96,7 @@ class AccountIcon : Control
             {
                 SizeF sz = g.MeasureString(t, f);
                 float w = Math.Max(16, sz.Width + 4);
-                RectangleF br = new RectangleF(Width - w - 1, 0, w, 15);
+                RectangleF br = Wide ? new RectangleF(Width - w - 12, 17, w, 15) : new RectangleF(Width - w - 1, 0, w, 15);
                 using (Brush rb = new SolidBrush(Color.FromArgb(220, 60, 20))) g.FillEllipse(rb, br);
                 g.DrawString(t, f, Brushes.White, br.X + (w - sz.Width) / 2, 1);
             }
@@ -717,4 +732,29 @@ class AutoMenu : ContextMenuStrip
         if (down && !wasDown && !Inside(Cursor.Position)) Close(ToolStripDropDownCloseReason.AppClicked);
         wasDown = down;
     }
+}
+// Viewport for the account list: a taller list inside scrolls with the mouse wheel (no scroll bar).
+class IconHost : Panel
+{
+    public Control Inner;
+
+    protected override void OnPaintBackground(PaintEventArgs e) { RailPanel.PaintFor(this, e.Graphics); }
+
+    public void ScrollBy(int d)
+    {
+        if (Inner == null) return;
+        int min = Math.Min(0, Height - Inner.Height - 8);
+        Inner.Top = Math.Max(min, Math.Min(0, Inner.Top + d));
+    }
+
+    public void EnsureVisible(Control c)
+    {
+        if (Inner == null || c.Parent != Inner) return;
+        int y = Inner.Top + c.Top;
+        if (y < 4) ScrollBy(4 - y);
+        else if (y + c.Height > Height - 4) ScrollBy(Height - 4 - (y + c.Height));
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e) { ScrollBy(e.Delta / 2); base.OnMouseWheel(e); }
+    protected override void OnResize(EventArgs e) { base.OnResize(e); ScrollBy(0); }
 }
