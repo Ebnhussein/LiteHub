@@ -290,7 +290,7 @@ class MainForm : Form
             else ShowApp(a);
         };
         tip.SetToolTip(b, a.Name);
-        ContextMenuStrip m = new ContextMenuStrip();
+        ContextMenuStrip m = new AutoMenu();
         ToolStripMenuItem reload = new ToolStripMenuItem(Loc.T("Reload"));
         reload.Click += delegate { if (a.View != null && a.View.CoreWebView2 != null) a.View.Reload(); };
         ToolStripMenuItem set = new ToolStripMenuItem(Loc.T("Account settings"));
@@ -315,7 +315,7 @@ class MainForm : Form
 
     void GridMenu(Control anchor)
     {
-        ContextMenuStrip m = new ContextMenuStrip();
+        ContextMenuStrip m = new AutoMenu();
         foreach (AppDef a in apps)
         {
             AppDef x = a;
@@ -356,7 +356,7 @@ class MainForm : Form
 
     void WorkspaceMenu(Control anchor)
     {
-        ContextMenuStrip m = new ContextMenuStrip();
+        ContextMenuStrip m = new AutoMenu();
         ToolStripMenuItem all = new ToolStripMenuItem(Loc.T("All accounts")); all.Checked = Cfg.Workspace == "";
         all.Click += delegate { SetWorkspace(""); }; m.Items.Add(all);
         foreach (string w in Workspaces())
@@ -614,7 +614,7 @@ class MainForm : Form
 
     void SplitMenu(Control anchor)
     {
-        ContextMenuStrip m = new ContextMenuStrip();
+        ContextMenuStrip m = new AutoMenu();
         string[] names = { "Single view", "2 side by side", "3 columns", "2 x 2 (4 accounts)", "3 x 2 (6 accounts)" };
         int[] counts = { 1, 2, 3, 4, 6 };
         for (int i = 0; i < names.Length; i++)
@@ -966,7 +966,7 @@ class MainForm : Form
     {
         tray.Icon = AppIcon;
         tray.Text = "LiteHub";
-        ContextMenuStrip m = new ContextMenuStrip();
+        ContextMenuStrip m = new AutoMenu();
         ToolStripMenuItem open = new ToolStripMenuItem(Loc.T("Open"));
         open.Click += delegate { Restore(); };
         ToolStripMenuItem exit = new ToolStripMenuItem(Loc.T("Exit"));
@@ -1068,6 +1068,18 @@ class MainForm : Form
 
     // ---------- accounts ----------
 
+    // notify.log: what happened to notifications (no message text), to find out why one did not show up.
+    static void NLog(string line)
+    {
+        try
+        {
+            string f = Path.Combine(Paths.Data, "notify.log");
+            if (File.Exists(f) && new FileInfo(f).Length > 100000) File.Delete(f);
+            File.AppendAllText(f, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + line + "\r\n");
+        }
+        catch (Exception) { }
+    }
+
     // Locked accounts ask for the passcode once; they lock again after sitting unused (see Sweep).
     bool Unlock(AppDef a)
     {
@@ -1158,6 +1170,7 @@ class MainForm : Form
             c.NotificationReceived += delegate(object s, CoreWebView2NotificationReceivedEventArgs e)
             {   // the system toast still shows; this only keeps a copy for the Inbox
                 string nt = e.Notification.Title, nb = e.Notification.Body;
+                NLog(a.Name + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
                 if (a.Locked) { nt = ""; nb = Loc.T("New message"); }
                 if (Cfg.DndActive || a.Locked) e.Handled = true;   // no pop-up; a locked account never shows its text
                 if (a.Locked && !Cfg.DndActive) tray.ShowBalloonTip(3000, a.Name, Loc.T("New message"), ToolTipIcon.Info);
@@ -1166,8 +1179,19 @@ class MainForm : Form
             c.PermissionRequested += delegate(object s, CoreWebView2PermissionRequestedEventArgs e)
             {
                 if (e.PermissionKind == CoreWebView2PermissionKind.Notifications)
-                    e.State = Cfg.Notify && a.Notify ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
+                {   // only an "allow" is remembered: a "deny" while notifications were off must not stay in the profile for good
+                    bool ok = Cfg.Notify && a.Notify;
+                    e.State = ok ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
+                    e.SavesInProfile = ok;
+                    NLog(a.Name + ": notification permission asked -> " + (ok ? "allow" : "deny"));
+                }
             };
+            Uri origin;
+            if (Cfg.Notify && a.Notify && Uri.TryCreate(a.Url, UriKind.Absolute, out origin))
+            {   // clear an old "denied" decision so the site sees notifications as granted
+                try { await c.Profile.SetPermissionStateAsync(CoreWebView2PermissionKind.Notifications, origin.GetLeftPart(UriPartial.Authority), CoreWebView2PermissionState.Allow); NLog(a.Name + ": notifications set to allowed for " + origin.Host); }
+                catch (Exception ex) { NLog(a.Name + ": could not set permission: " + ex.Message); }
+            }
             c.NewWindowRequested += delegate(object s, CoreWebView2NewWindowRequestedEventArgs e)
             {
                 if (!a.ExternalLinks) return;

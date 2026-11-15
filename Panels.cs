@@ -570,7 +570,7 @@ class DownloadsPanel : Panel
         list.DrawItem += delegate(object s, DrawListViewItemEventArgs e) { e.DrawDefault = true; };
         list.DrawSubItem += delegate(object s, DrawListViewSubItemEventArgs e) { e.DrawDefault = true; };
         list.DoubleClick += delegate { Open(false); };
-        ContextMenuStrip cm = new ContextMenuStrip();
+        ContextMenuStrip cm = new AutoMenu();
         ToolStripMenuItem open = new ToolStripMenuItem(Loc.T("Open")); open.Click += delegate { Open(false); };
         ToolStripMenuItem show = new ToolStripMenuItem(Loc.T("Show in folder")); show.Click += delegate { Open(true); };
         cm.Items.Add(open); cm.Items.Add(show);

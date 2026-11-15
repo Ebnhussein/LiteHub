@@ -666,3 +666,36 @@ class PalettePanel : GlassPanel
             TextRenderer.DrawText(g, Loc.T("Enter = open     Esc = close"), f, new Rectangle(0, Height - 30, Width, 24), Pal.Sub, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }
 }
+// Context menu that also closes on a click inside a web page (WebView2 does not send its clicks to our window).
+class AutoMenu : ContextMenuStrip
+{
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
+    readonly Timer t = new Timer();
+    bool wasDown;
+
+    public AutoMenu() { t.Interval = 40; t.Tick += Check; }
+
+    static bool Down() { return (GetAsyncKeyState(0x01) & 0x8000) != 0 || (GetAsyncKeyState(0x02) & 0x8000) != 0; }
+
+    protected override void OnOpened(EventArgs e) { base.OnOpened(e); wasDown = Down(); t.Start(); }
+    protected override void OnClosed(ToolStripDropDownClosedEventArgs e) { t.Stop(); base.OnClosed(e); }
+    protected override void Dispose(bool disposing) { if (disposing) t.Dispose(); base.Dispose(disposing); }
+
+    bool Inside(Point p)
+    {
+        if (Bounds.Contains(p)) return true;
+        foreach (ToolStripItem i in Items)
+        {
+            ToolStripMenuItem m = i as ToolStripMenuItem;
+            if (m != null && m.DropDown.Visible && m.DropDown.Bounds.Contains(p)) return true;
+        }
+        return false;
+    }
+
+    void Check(object s, EventArgs e)
+    {
+        bool down = Down();
+        if (down && !wasDown && !Inside(Cursor.Position)) Close(ToolStripDropDownCloseReason.AppClicked);
+        wasDown = down;
+    }
+}
