@@ -1279,8 +1279,18 @@ class MainForm : Form
             }
             c.NewWindowRequested += delegate(object s, CoreWebView2NewWindowRequestedEventArgs e)
             {
-                if (!a.ExternalLinks) return;
-                e.Handled = true;
+                Uri nu, home;
+                if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out nu) || !Uri.TryCreate(a.Url, UriKind.Absolute, out home)) return;
+                if (a.ExternalLinks)
+                {   // links go to your normal browser
+                    e.Handled = true;
+                    if (e.IsUserInitiated && e.Uri.StartsWith("http")) Process.Start(e.Uri);
+                    return;
+                }
+                if (Reg(nu.Host) == Reg(home.Host)) { e.Handled = true; c.Navigate(e.Uri); return; }   // the app opening one of its own pages: stay in this window
+                string hp = nu.Host + nu.AbsolutePath;
+                if (hp.StartsWith("accounts.google.") || hp.StartsWith("login.microsoftonline.com") || hp.StartsWith("login.live.com") || hp.StartsWith("appleid.apple.com")) return;   // sign-in popups need their opener
+                e.Handled = true;   // any other site: your normal browser, not a stray window
                 if (e.IsUserInitiated && e.Uri.StartsWith("http")) Process.Start(e.Uri);
             };
             c.DownloadStarting += delegate(object s, CoreWebView2DownloadStartingEventArgs e) { OnDownload(a, e); };
