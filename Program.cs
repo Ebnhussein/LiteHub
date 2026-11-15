@@ -167,6 +167,7 @@ class MainForm : Form
             if (!string.IsNullOrEmpty(Paths.TestData))
             {   // test hooks: LITEHUB_TOAST=1 shows sample cards, LITEHUB_DROP=<file> drops a file on the first account
                 if (Environment.GetEnvironmentVariable("LITEHUB_TOAST") == "1") { ToastSample(); if (apps.Count > 1) Toast.Show(apps[1], "New invoice from Acme", "Your invoice #2231 is ready to download and pay before Friday", delegate { }); }
+                if (Environment.GetEnvironmentVariable("LITEHUB_SPLIT") == "2") SetSplit(2);
                 string df = Environment.GetEnvironmentVariable("LITEHUB_DROP");
                 if (df != null && apps.Count > 0) SendFiles(apps[0], new string[] { df });
             }

@@ -78,7 +78,7 @@ class SettingsPanel : Panel
     Button NavButton(string text, int y, bool selected, EventHandler click)
     {
         Button b = new RoundButton();
-        b.Text = Loc.T(text); b.SetBounds(8, y, 194, 38);
+        b.Text = Loc.T(text); b.SetBounds(8, y, 200, 40);
         b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Pal.Hover;
         b.TextAlign = ContentAlignment.MiddleLeft; b.Padding = new Padding(12, 0, 0, 0);
         b.BackColor = selected ? Pal.Blend(Pal.Page, Pal.Brand, Pal.Dark ? 0.28 : 0.14) : Color.Transparent;
@@ -96,20 +96,20 @@ class SettingsPanel : Panel
         {
             string key = p;
             NavButton(p, y, page == p, delegate { Go(key); });
-            y += 40;
+            y += 46;
         }
         y += 8;
         Label h = Ui.Text("Accounts", 10f, true, false); h.Location = new Point(14, y + 6); nav.Controls.Add(h);
         Button sort = Ui.Btn("⇅", 40, delegate { reorder = !reorder; Build(); });
         sort.Location = new Point(150, y); sort.Height = 28; sort.BackColor = reorder ? Pal.Card : Pal.Hover; nav.Controls.Add(sort);
-        y += 36;
+        y += 44;
         foreach (AppDef a in m.Apps)
         {
             AppDef acc = a;
             bool[] st = new bool[2];   // [0] dragging, [1] just dragged (swallow the click)
             int[] downY = new int[1];
             Button nb = NavButton(a.Name, y, page == a.Id, delegate { if (st[1]) { st[1] = false; return; } Go(acc.Id); });
-            nb.Width = reorder ? 140 : 194;
+            nb.Width = reorder ? 140 : 200;
             if (reorder)
             {   // drag a row up or down; 40 px = one place
                 nb.MouseDown += delegate(object s, MouseEventArgs e) { downY[0] = e.Y; st[0] = false; };
@@ -119,7 +119,7 @@ class SettingsPanel : Panel
                     nb.Cursor = Cursors.Hand;
                     if (!st[0]) return;
                     st[0] = false; st[1] = true;
-                    int delta = (int)Math.Round((e.Y - downY[0]) / 40.0);
+                    int delta = (int)Math.Round((e.Y - downY[0]) / 46.0);
                     if (delta != 0) { m.MoveApp(acc, delta); BeginInvoke(new Action(Build)); }
                 };
             }
@@ -129,7 +129,7 @@ class SettingsPanel : Panel
                 Button dn = Ui.Btn("▼", 24, delegate { m.MoveApp(acc, 1); Build(); }); dn.SetBounds(176, y + 5, 24, 28);
                 nav.Controls.Add(up); nav.Controls.Add(dn);
             }
-            y += 40;
+            y += 46;
         }
         y += 8;
         NavButton("About", y, page == "About", delegate { Go("About"); });
@@ -139,12 +139,12 @@ class SettingsPanel : Panel
 
     void Title(string t)
     {
-        Label l = Ui.Text(t, Ds.Title, true, false); l.Margin = new Padding(0, 0, 0, 14); content.Controls.Add(l);
+        Label l = Ui.Text(t, Ds.Title, true, false); l.Margin = new Padding(0, 0, 0, 24); content.Controls.Add(l);
     }
 
     void Heading(string t)
     {
-        Label l = Ui.Text(t, 11f, true, false); l.Margin = new Padding(0, 14, 0, 8); content.Controls.Add(l);
+        Label l = Ui.Text(t, 11f, true, false); l.Margin = new Padding(0, 30, 0, 12); content.Controls.Add(l);
     }
 
     void Add(Control c) { content.Controls.Add(c); }
@@ -171,7 +171,7 @@ class SettingsPanel : Panel
             Ui.Switch(Cfg.HotkeyOn, delegate(object s, EventArgs e) { Cfg.HotkeyOn = ((Toggle)s).Checked; Cfg.Save(); m.RegisterHotkey(); })));
         Label keys = Ui.Text(Cfg.Hotkey, 10f, true, false);
         Panel kr = Ui.Row(w, "Shortcut keys", "Needs Alt, Ctrl, Shift or Win plus one key", null);
-        keys.Location = new Point(w - 330, 22); kr.Controls.Add(keys);
+        keys.Location = new Point(w - 330, 27); kr.Controls.Add(keys);
         Button rec = Ui.Btn("Record", 80, delegate
         {
             string k = Dialogs.RecordHotkey();
@@ -181,9 +181,9 @@ class SettingsPanel : Panel
             if (!m.RegisterHotkey()) { MessageBox.Show(Loc.F("Another program already uses {0}. Pick a different shortcut.", k), "LiteHub"); Cfg.Hotkey = old; m.RegisterHotkey(); return; }
             Cfg.Save(); keys.Text = k;
         });
-        rec.Location = new Point(w - 190, 17); kr.Controls.Add(rec);
+        rec.Location = new Point(w - 188, 23); kr.Controls.Add(rec);
         Button reset = Ui.Btn("Reset", 80, delegate { Cfg.Hotkey = "Alt+E"; Cfg.Save(); m.RegisterHotkey(); keys.Text = Cfg.Hotkey; });
-        reset.Location = new Point(w - 100, 17); kr.Controls.Add(reset);
+        reset.Location = new Point(w - 100, 23); kr.Controls.Add(reset);
         Add(kr);
         Heading("Privacy");
         Toggle pass = null;
@@ -269,9 +269,9 @@ class SettingsPanel : Panel
             else if (!PickFolder(path, set)) t.Checked = false;
             path.Visible = browse.Visible = t.Checked;
         });
-        t.Location = new Point(w - t.Width - 16, 21); t.Anchor = AnchorStyles.Top | AnchorStyles.Right; p.Controls.Add(t);
+        t.Location = new Point(w - t.Width - Ds.RowPad, (Ds.RowH - t.Height) / 2); t.Anchor = AnchorStyles.Top | AnchorStyles.Right; p.Controls.Add(t);
         browse.Click += delegate { PickFolder(path, set); };
-        path.Location = new Point(w - 16 - 44 - 12 - 80 - 8 - 300, 17); browse.Location = new Point(w - 16 - 44 - 12 - 80, 17);
+        path.Location = new Point(w - Ds.RowPad - 48 - 12 - 80 - 8 - 300, 27); browse.Location = new Point(w - Ds.RowPad - 48 - 12 - 80, 23);
         path.Visible = browse.Visible = t.Checked;
         p.Controls.Add(path); p.Controls.Add(browse);
         return p;
@@ -503,10 +503,10 @@ class AddAccountPanel : Panel
         Dock = DockStyle.Fill; BackColor = Pal.Page;
         Panel left = new Panel(); left.Dock = DockStyle.Left; left.Width = 320; left.BackColor = Pal.Page;
         Label t = Ui.Text("Select a service", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop);
-        search = Ui.Edit("", 260); search.Location = new Point(Ds.PageX, 84); Ui.Cue(search, "Search services");
+        search = Ui.Edit("", 260); search.Location = new Point(Ds.PageX, 96); Ui.Cue(search, "Search services");
         Label hint = Ui.Text("You can add the same service many times\n(two WhatsApps, three Gmails...). Each one has\nits own login and can run at the same time.", 9f, false, true);
-        hint.Location = new Point(Ds.PageX, 124);
-        Button imp = Ui.Btn("Import from a browser...", 220, delegate { m.ShowImport(); }); imp.Location = new Point(Ds.PageX, 200);
+        hint.Location = new Point(Ds.PageX, 140);
+        Button imp = Ui.Btn("Import from a browser...", 220, delegate { m.ShowImport(); }); imp.Location = new Point(Ds.PageX, 218);
         left.Controls.AddRange(new Control[] { t, search, hint, imp });
         cards.Dock = DockStyle.Fill; cards.AutoScroll = true; cards.Padding = new Padding(10, 14, 10, 10); cards.BackColor = Pal.Page;
         cards.FlowDirection = FlowDirection.TopDown; cards.WrapContents = false;
@@ -528,13 +528,13 @@ class AddAccountPanel : Panel
     Panel Card(Service s, Action add)
     {
         int n = Added(s);
-        Panel p = new GlassPanel(); p.Size = new Size(290, 100); p.BackColor = Pal.Card; p.Margin = new Padding(8);
-        PictureBox dot = Ui.Dot(s.Color, s.Name, 36); dot.Location = new Point(14, 14); p.Controls.Add(dot);
-        Label name = Ui.Text(s.Name, 11f, true, false); name.Location = new Point(60, 12); name.MaximumSize = new Size(220, 0); p.Controls.Add(name);
+        Panel p = new GlassPanel(); p.Size = new Size(304, 116); p.BackColor = Pal.Card; p.Margin = new Padding(10);
+        PictureBox dot = Ui.Dot(s.Color, s.Name, 36); dot.Location = new Point(20, 20); p.Controls.Add(dot);
+        Label name = Ui.Text(s.Name, 11f, true, false); name.Location = new Point(72, 18); name.MaximumSize = new Size(220, 0); p.Controls.Add(name);
         string host = s.IsTemplate ? Loc.T("your own address") : new Uri(s.Url).Host;
-        Label sub = Ui.Text(n > 0 ? host + "  •  " + Loc.F("{0} added", n) : host, 8.5f, false, true); sub.Location = new Point(60, 38); p.Controls.Add(sub);
+        Label sub = Ui.Text(n > 0 ? host + "  •  " + Loc.F("{0} added", n) : host, 8.5f, false, true); sub.Location = new Point(72, 44); p.Controls.Add(sub);
         Button b = Ui.Btn(n > 0 ? "Add another  >" : "Add account  >", 130, delegate { add(); });
-        b.Location = new Point(146, 62); p.Controls.Add(b);
+        b.Location = new Point(154, 72); p.Controls.Add(b);
         return p;
     }
 
@@ -599,7 +599,7 @@ class DownloadsPanel : Panel
         this.m = m;
         Dock = DockStyle.Fill; BackColor = Pal.Page;
         Label t = Ui.Text("Downloads", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop); Controls.Add(t);
-        listCard.Location = new Point(Ds.PageX, 76); listCard.BackColor = Pal.Card; listCard.Padding = new Padding(6);
+        listCard.Location = new Point(Ds.PageX, 88); listCard.BackColor = Pal.Card; listCard.Padding = new Padding(6);
         listCard.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         list.Dock = DockStyle.Fill;
         list.View = View.Details; list.FullRowSelect = true; list.BorderStyle = BorderStyle.None; list.HeaderStyle = ColumnHeaderStyle.Nonclickable;
@@ -634,8 +634,8 @@ class DownloadsPanel : Panel
         clear.Location = new Point(210, 0); clear.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; Controls.Add(clear);
         Resize += delegate
         {
-            listCard.Size = new Size(Width - 2 * Ds.PageX, Height - 76 - 60);
-            folder.Top = clear.Top = Height - 48;
+            listCard.Size = new Size(Width - 2 * Ds.PageX, Height - 88 - 64);
+            folder.Top = clear.Top = Height - 52;
             list.Columns[2].Width = Math.Max(140, list.ClientSize.Width - 380 - 140);   // last column fills the header
         };
         refresh.Interval = 1000; refresh.Tick += delegate { Fill(); }; refresh.Start();
@@ -713,7 +713,7 @@ class InboxPanel : Panel
     {
         markAll.Location = new Point(Width - Ds.PageX - 80 - 8 - 130, Ds.PageTop + 2); clear.Location = new Point(Width - Ds.PageX - 80, Ds.PageTop + 2);
         q.Location = new Point(Math.Max(200, Width - Ds.PageX - 80 - 8 - 130 - 32 - 200), Ds.PageTop + 8);
-        list.SetBounds(Ds.PageX, 76, Math.Max(100, Width - 2 * Ds.PageX), Math.Max(100, Height - 76 - 12));
+        list.SetBounds(Ds.PageX, 88, Math.Max(100, Width - 2 * Ds.PageX), Math.Max(100, Height - 88 - 12));
     }
 
     protected override void OnResize(EventArgs e)
@@ -749,15 +749,15 @@ class InboxPanel : Panel
         foreach (MainForm.InboxItem it in shown)
         {
             MainForm.InboxItem item = it;
-            Panel p = new GlassPanel(); p.Size = new Size(w, 80); p.BackColor = Pal.Card; p.Margin = new Padding(0, 0, 0, 6); p.Cursor = Cursors.Hand;
-            PictureBox dot = Ui.Dot(it.App.AccentColor.ToArgb() & 0xFFFFFF, it.App.Name, 38); dot.Location = new Point(16, 20); p.Controls.Add(dot);
-            Label name = Ui.Text(it.App.Name, 10f, true, false); name.Location = new Point(66, 10); p.Controls.Add(name);
-            Label time = Ui.Text(When(it.Time), 8.5f, false, true); time.Location = new Point(w - 90, 12); p.Controls.Add(time);
+            Panel p = new GlassPanel(); p.Size = new Size(w, 96); p.BackColor = Pal.Card; p.Margin = new Padding(0, 0, 0, Ds.RowGap); p.Cursor = Cursors.Hand;
+            PictureBox dot = Ui.Dot(it.App.AccentColor.ToArgb() & 0xFFFFFF, it.App.Name, 38); dot.Location = new Point(Ds.RowPad, 29); p.Controls.Add(dot);
+            Label name = Ui.Text(it.App.Name, 10f, true, false); name.Location = new Point(72, 14); p.Controls.Add(name);
+            Label time = Ui.Text(When(it.Time), 8.5f, false, true); time.Location = new Point(w - 96, 16); p.Controls.Add(time);
             Label title = Ui.Text(it.Title, it.Read ? 9.5f : 9.5f, !it.Read, false); title.AutoSize = false; title.AutoEllipsis = true;
-            title.SetBounds(66, 32, w - 110, 20); p.Controls.Add(title);
+            title.SetBounds(72, 40, w - 120, 20); p.Controls.Add(title);
             Label body = Ui.Text(it.Body.Replace("\r", " ").Replace("\n", " "), 9f, false, true); body.AutoSize = false; body.AutoEllipsis = true;
-            body.SetBounds(66, 54, w - 110, 18); p.Controls.Add(body);
-            if (!it.Read) { Label u = Ui.Text("●", 9f, false, false); u.ForeColor = Pal.BrandInk; u.Location = new Point(w - 26, 34); p.Controls.Add(u); u.Click += delegate { m.OpenInbox(item); }; }
+            body.SetBounds(72, 64, w - 120, 18); p.Controls.Add(body);
+            if (!it.Read) { Label u = Ui.Text("●", 9f, false, false); u.ForeColor = Pal.BrandInk; u.Location = new Point(w - 30, 38); p.Controls.Add(u); u.Click += delegate { m.OpenInbox(item); }; }
             foreach (Control c in p.Controls) { c.Cursor = Cursors.Hand; c.Click += delegate { m.OpenInbox(item); }; }
             p.Click += delegate { m.OpenInbox(item); };
             list.Controls.Add(p);

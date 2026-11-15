@@ -222,18 +222,18 @@ static class Ui
     public static Panel Row(int width, string title, string hint, Control right)
     {
         Panel p = new GlassPanel();
-        p.Size = new Size(width, 64);
+        p.Size = new Size(width, Ds.RowH);
         p.BackColor = Pal.Card;
-        Label t = Text(title, 10f, false, false); t.Location = new Point(16, hint != null ? 12 : 21);
+        Label t = Text(title, Ds.Body, false, false); t.Location = new Point(Ds.RowPad, hint != null ? 16 : (Ds.RowH - 21) / 2);
         p.Controls.Add(t);
-        if (hint != null) { Label h = Text(hint, 8.5f, false, true); h.Location = new Point(16, 34); h.MaximumSize = new Size(width - 260, 0); p.Controls.Add(h); }
+        if (hint != null) { Label h = Text(hint, Ds.Caption, false, true); h.Location = new Point(Ds.RowPad, 42); h.MaximumSize = new Size(width - 260, 0); p.Controls.Add(h); }
         if (right != null)
         {
-            right.Location = new Point(width - right.Width - 16, (64 - right.Height) / 2);
+            right.Location = new Point(width - right.Width - Ds.RowPad, (Ds.RowH - right.Height) / 2);
             right.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             p.Controls.Add(right);
         }
-        p.Margin = new Padding(0, 0, 0, 6);
+        p.Margin = new Padding(0, 0, 0, Ds.RowGap);
         return p;
     }
 

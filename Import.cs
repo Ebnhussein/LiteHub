@@ -168,20 +168,20 @@ class ImportPanel : Panel
         Dock = DockStyle.Fill; BackColor = Pal.Page;
         Label t = Ui.Text("Import accounts", Ds.Title, true, false); t.Location = new Point(Ds.PageX, Ds.PageTop); Controls.Add(t);
         Label d = Ui.Text("Pick the sites you already use. LiteHub reads your browser's bookmarks and profile list on this PC only and uploads nothing. Logins cannot be copied from a browser, so you sign in once in each new account.", Ds.Caption + 0.5f, false, true);
-        d.MaximumSize = new Size(760, 0); d.Location = new Point(Ds.PageX, 68); Controls.Add(d);
+        d.MaximumSize = new Size(760, 0); d.Location = new Point(Ds.PageX, 80); Controls.Add(d);
         Button file = Ui.Btn("Import from a file...", 170, delegate { PickFile(); });
         Button all = Ui.Btn("Select all", 100, delegate { foreach (ImportItem i in items) if (i.Group != "other" || showOther) i.Checked = true; Fill(); });
         Button none = Ui.Btn("None", 80, delegate { foreach (ImportItem i in items) i.Checked = false; Fill(); });
-        file.Location = new Point(Ds.PageX, 124); all.Location = new Point(Ds.PageX + 178, 124); none.Location = new Point(Ds.PageX + 286, 124);
+        file.Location = new Point(Ds.PageX, 140); all.Location = new Point(Ds.PageX + 178, 140); none.Location = new Point(Ds.PageX + 286, 140);
         Controls.AddRange(new Control[] { file, all, none });
         list.FlowDirection = FlowDirection.TopDown; list.WrapContents = false; list.AutoScroll = true; list.BackColor = Pal.Page;
-        list.Location = new Point(Ds.PageX, 168); list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        list.Location = new Point(Ds.PageX, 190); list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         Controls.Add(list); Ui.DarkScroll(list);
         summary = Ui.Text("", Ds.Body, false, true); summary.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; Controls.Add(summary);
         go = Ui.Primary(Ui.Btn("Import", 190, delegate { DoImport(); })); go.Anchor = AnchorStyles.Bottom | AnchorStyles.Right; Controls.Add(go);
         Resize += delegate
         {
-            list.Size = new Size(Math.Max(300, Width - 2 * Ds.PageX), Math.Max(100, Height - 168 - 64));
+            list.Size = new Size(Math.Max(300, Width - 2 * Ds.PageX), Math.Max(100, Height - 190 - 64));
             summary.Location = new Point(Ds.PageX, Height - 44); go.Location = new Point(Width - Ds.PageX - go.Width, Height - 50);
             if (items != null && Math.Abs(list.ClientSize.Width - builtW) > 40) Fill();   // rows follow the window width
         };

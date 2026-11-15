@@ -24,7 +24,8 @@ static class Ds
 
     // ---- spacing scale (px) ----
     public const int S1 = 4, S2 = 8, S3 = 12, S4 = 16, S5 = 24, S6 = 32;
-    public const int PageX = S6, PageTop = S5;   // every full-page screen starts here
+    public const int PageX = 40, PageTop = 32;   // every full-page screen starts here
+    public const int RowH = 76, RowPad = 20, RowGap = 10;   // cards: 20 px inside, 10 px between
 
     // ---- type scale (Segoe UI stands in for SF Pro, pt) ----
     public const float Micro = 7f;      // badges
