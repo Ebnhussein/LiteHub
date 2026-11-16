@@ -133,6 +133,7 @@ class MainForm : Form
         ApplyLayout();
 
         SetupTray();
+        Activated += delegate { if (overlay == null) ClearInbox(active); };   // coming back to the window with the account already open
         showEvt = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, "LiteHub.show" + Paths.Tag);
         System.Threading.ThreadPool.RegisterWaitForSingleObject(showEvt,
             delegate { if (IsHandleCreated) BeginInvoke(new Action(delegate { Restore(); TakeLink(); })); }, null, -1, false);
@@ -621,10 +622,16 @@ class MainForm : Form
 
     void AddInbox(AppDef a, string title, string body)
     {
-        bool seen = a == active && Visible && overlay == null && WindowState != FormWindowState.Minimized;
-        Inbox.Insert(0, new InboxItem { App = a, Title = title ?? "", Body = body ?? "", Time = DateTime.Now, Read = seen });
+        if (a == active && Visible && overlay == null && WindowState != FormWindowState.Minimized) return;   // it is on screen right now
+        Inbox.Insert(0, new InboxItem { App = a, Title = title ?? "", Body = body ?? "", Time = DateTime.Now });
         if (Inbox.Count > 200) Inbox.RemoveRange(200, Inbox.Count - 200);
         InboxRefresh();
+    }
+
+    // Opening an account is reading its messages: they leave the Inbox.
+    void ClearInbox(AppDef a)
+    {
+        if (a != null && Inbox.RemoveAll(delegate(InboxItem i) { return i.App == a; }) > 0) InboxRefresh();
     }
 
     static string Esc(string s) { return s.Replace("\\", "\\\\").Replace("\t", "\\t").Replace("\r", "").Replace("\n", "\\n"); }
@@ -1091,26 +1098,48 @@ class MainForm : Form
         tray.Icon = AppIcon;
         tray.Text = "LiteHub";
         ContextMenuStrip m = new AutoMenu();
-        ToolStripMenuItem open = new ToolStripMenuItem(Loc.T("Open"));
-        open.Click += delegate { Restore(); };
-        ToolStripMenuItem exit = new ToolStripMenuItem(Loc.T("Exit"));
-        exit.Click += delegate { reallyExit = true; Close(); };
-        ToolStripMenuItem inbox = new ToolStripMenuItem(Loc.T("Inbox"));
-        inbox.Click += delegate { Restore(); ShowOverlay(new InboxPanel(this), "Inbox"); };
-        ToolStripMenuItem dndOn = new ToolStripMenuItem(Loc.F("Do not disturb: {0}", Loc.T("1 hour")));
-        dndOn.Click += delegate { SetDnd(60); };
-        ToolStripMenuItem dndOff = new ToolStripMenuItem(Loc.F("Do not disturb: {0}", Loc.T("Off")));
-        dndOff.Click += delegate { SetDnd(0); };
-        m.Items.Add(open);
-        m.Items.Add(inbox);
-        m.Items.Add(dndOn);
-        m.Items.Add(dndOff);
-        m.Items.Add(new ToolStripSeparator());
-        m.Items.Add(exit);
+        m.ImageScalingSize = new Size(20, 20);
+        m.Opening += delegate { FillTray(m); };   // rebuilt each time so accounts, icons and counts are current
         tray.ContextMenuStrip = m;
         tray.DoubleClick += delegate { Restore(); };
         tray.BalloonTipClicked += delegate { Restore(); if (balloonApp != null && apps.Contains(balloonApp)) ShowApp(balloonApp); };
         tray.Visible = true;
+    }
+
+    // Tray menu: open LiteHub, one row per account (icon, name, unread count), then the quick actions and Exit.
+    void FillTray(ContextMenuStrip m)
+    {
+        foreach (ToolStripItem old in m.Items) if (old.Image != null) old.Image.Dispose();
+        m.Items.Clear();
+        ToolStripMenuItem open = Row(Loc.T("Open LiteHub"), AppIcon.ToBitmap(), delegate { Restore(); });
+        m.Items.Add(open);
+        if (apps.Count > 0) m.Items.Add(new ToolStripSeparator());
+        foreach (AppDef a in apps)
+        {
+            AppDef x = a;
+            ToolStripMenuItem it = Row(a.Name + (a.Unread > 0 ? "   " + a.Unread : ""), a.Icon, delegate { Restore(); ShowApp(x); });
+            it.Checked = false; m.Items.Add(it);
+        }
+        m.Items.Add(new ToolStripSeparator());
+        m.Items.Add(Row(Loc.T("Inbox"), null, delegate { Restore(); ShowOverlay(new InboxPanel(this), "Inbox"); }));
+        if (Cfg.DndActive) m.Items.Add(Row(Loc.F("Do not disturb: {0}", Loc.T("Off")), null, delegate { SetDnd(0); }));
+        else m.Items.Add(Row(Loc.F("Do not disturb: {0}", Loc.T("1 hour")), null, delegate { SetDnd(60); }));
+        m.Items.Add(new ToolStripSeparator());
+        m.Items.Add(Row(Loc.T("Exit"), null, delegate { reallyExit = true; Close(); }));
+    }
+
+    static ToolStripMenuItem Row(string text, Image img, Action click)
+    {
+        ToolStripMenuItem it = new ToolStripMenuItem(text);
+        it.Padding = new Padding(2, 6, 2, 6);
+        if (img != null)
+        {   // a smooth 20 px copy, never the original (the menu frees its images)
+            Bitmap b = new Bitmap(20, 20);
+            using (Graphics g = Graphics.FromImage(b)) { g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic; g.DrawImage(img, 0, 0, 20, 20); }
+            it.Image = b;
+        }
+        it.Click += delegate { click(); };
+        return it;
     }
 
     void Restore()
@@ -1343,6 +1372,7 @@ class MainForm : Form
     {
         if (!Unlock(a)) return;
         HideOverlay();
+        ClearInbox(a);
         if (split.Count > 0)
         {   // split view: a new account takes the focused pane, an open one just gets the focus
             if (!split.Contains(a))

@@ -493,6 +493,7 @@ class SettingsPanel : Panel
         Add(Ui.Row(RowWidth, "Check for updates", null, Ui.Btn("Check", 90, delegate(object s, EventArgs e) { CheckUpdate((Button)s); })));
         Heading("Author and support");
         Add(Ui.Row(RowWidth, Log.Author, "Source code, questions and bug reports: GitHub Issues", Ui.Btn("Open GitHub", 130, delegate { OpenUrl(Log.RepoUrl); })));
+        Add(Ui.Row(RowWidth, "Email", "Private questions and security reports", Ui.Btn("Email", 90, delegate { OpenUrl("mailto:" + Log.Email + "?subject=LiteHub"); })));
         Add(Ui.Row(RowWidth, "Report a problem", "Copies the diagnostics (no messages, no passwords) and opens a new issue on GitHub", Ui.Primary(Ui.Btn("Report", 100, delegate { ReportProblem(); }))));
         Add(Ui.Row(RowWidth, "Open logs folder", "Where LiteHub keeps its log files (no messages or passwords inside)", Ui.Btn("Open", 90, delegate { Directory.CreateDirectory(Log.Dir); OpenUrl(Log.Dir); })));
         Add(Ui.Row(RowWidth, "Copy diagnostics", "Version, Windows, WebView2 and the last log lines, to paste anywhere", Ui.Btn("Copy", 90, delegate { try { Clipboard.SetText(Log.Diagnostics(m.Apps.Count, m.LoadedCount)); } catch (Exception) { } })));

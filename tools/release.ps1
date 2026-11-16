@@ -15,6 +15,13 @@ $zip = "$root\dist\LiteHub-$ver-win-x64.zip"; Remove-Item $zip -Force -ErrorActi
 Compress-Archive -Path "$stage\*" -DestinationPath $zip
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
 "$hash  $(Split-Path $zip -Leaf)" | Set-Content "$zip.sha256" -Encoding ASCII
+
+# Portable zip: the same files plus portable.txt, so everything is kept in a "data" folder next to LiteHub.exe
+"This file makes LiteHub keep its data in the 'data' folder next to LiteHub.exe. Delete it to use %LOCALAPPDATA% instead." | Set-Content "$stage\portable.txt" -Encoding ASCII
+$port = "$root\dist\LiteHub-$ver-portable.zip"; Remove-Item $port -Force -ErrorAction SilentlyContinue
+Compress-Archive -Path "$stage\*" -DestinationPath $port
+$phash = (Get-FileHash $port -Algorithm SHA256).Hash
+"$phash  $(Split-Path $port -Leaf)" | Set-Content "$port.sha256" -Encoding ASCII
 Remove-Item $stage -Recurse -Force
 
 # Setup exe: a small per-user installer (no admin rights) that carries the zip inside it
@@ -29,4 +36,5 @@ $shash = (Get-FileHash $setup -Algorithm SHA256).Hash
 "$shash  $(Split-Path $setup -Leaf)" | Set-Content "$setup.sha256" -Encoding ASCII
 
 "$zip`nSHA256 $hash"
+"$port`nSHA256 $phash"
 "$setup`nSHA256 $shash"

@@ -324,7 +324,11 @@ static class Paths
     // LITEHUB_DATA points a test run at a throw-away folder (and its own single-instance names), so tests never touch real accounts.
     public static readonly string TestData = Environment.GetEnvironmentVariable("LITEHUB_DATA");
     public static string Tag { get { return string.IsNullOrEmpty(TestData) ? "" : ".test"; } }
-    public static readonly string Data = !string.IsNullOrEmpty(TestData) ? TestData : Path.Combine(
+    // A "portable.txt" next to LiteHub.exe (the portable zip has one) keeps every account, login and setting in the "data" folder beside it,
+    // so the whole folder can live on a USB stick. Without it (the installed copy) data is in %LOCALAPPDATA%\LiteHub.
+    static readonly string Here = AppDomain.CurrentDomain.BaseDirectory;
+    public static readonly bool Portable = File.Exists(Path.Combine(Here, "portable.txt"));
+    public static readonly string Data = !string.IsNullOrEmpty(TestData) ? TestData : Portable ? Path.Combine(Here, "data") : Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LiteHub");
     public static string Apps { get { return Path.Combine(Data, "apps.txt"); } }
     public static string State { get { return Path.Combine(Data, "state.txt"); } }
