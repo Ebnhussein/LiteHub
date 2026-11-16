@@ -32,6 +32,7 @@ $ico = "/win32icon:$root\assets\logo.ico"
 $out = "/out:$setup"
 & $csc /nologo /target:winexe $ico $out $res /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll "$root\installer\Setup.cs" "$root\AssemblyInfo.cs"
 if ($LASTEXITCODE -ne 0) { throw 'installer build failed' }
+Copy-Item $setup "$root\dist\LiteHub-Setup.exe" -Force   # fixed name so releases/latest/download/LiteHub-Setup.exe always points at the newest installer
 $shash = (Get-FileHash $setup -Algorithm SHA256).Hash
 "$shash  $(Split-Path $setup -Leaf)" | Set-Content "$setup.sha256" -Encoding ASCII
 

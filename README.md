@@ -4,6 +4,10 @@
 WhatsApp, Telegram, Gmail, Slack, Instagram, LinkedIn and 92 more, each account with its own login,
 loaded only when you open it and freed when you stop using it. No ads. No telemetry.
 
+[![Download LiteHub for Windows](https://img.shields.io/github/v/release/Ebnhussein/LiteHub?label=Download%20for%20Windows&style=for-the-badge&color=0A84FF)](https://github.com/Ebnhussein/LiteHub/releases/latest/download/LiteHub-Setup.exe)
+
+[Portable version and other files](https://github.com/Ebnhussein/LiteHub/releases/latest)
+
 ![LiteHub](assets/logo-wordmark.png)
 
 ## Why
