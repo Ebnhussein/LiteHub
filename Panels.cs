@@ -452,34 +452,6 @@ class SettingsPanel : Panel
         OpenUrl(Log.IssuesUrl);
     }
 
-    async void CheckUpdate(Button b)
-    {
-        b.Enabled = false;
-        try
-        {
-            string url = Cfg.UpdateUrl; Uri u;
-            if (url.Length == 0 || !Uri.TryCreate(url, UriKind.Absolute, out u) || (u.Scheme != "http" && u.Scheme != "https"))
-            { MessageBox.Show(Loc.T("No update address is set. Add a line UpdateUrl=... to settings.txt."), "LiteHub"); return; }
-            string json = await System.Threading.Tasks.Task.Run<string>(new Func<string>(delegate
-            {
-                using (System.Net.WebClient c = new System.Net.WebClient()) { c.Headers[System.Net.HttpRequestHeader.UserAgent] = "LiteHub"; return c.DownloadString(url); }
-            }));
-            System.Text.RegularExpressions.Match tag = System.Text.RegularExpressions.Regex.Match(json, "\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
-            System.Text.RegularExpressions.Match link = System.Text.RegularExpressions.Regex.Match(json, "\"html_url\"\\s*:\\s*\"([^\"]+)\"");
-            Version cur = new Version(Application.ProductVersion), latest;
-            if (!tag.Success || !Version.TryParse(tag.Groups[1].Value.TrimStart('v', 'V'), out latest)) throw new FormatException();
-            if (latest > cur)
-            {
-                if (MessageBox.Show(Loc.F("Version {0} is available. Open the download page?", latest), "LiteHub", MessageBoxButtons.YesNo) == DialogResult.Yes
-                    && link.Success && (link.Groups[1].Value.StartsWith("https://") || link.Groups[1].Value.StartsWith("http://")))
-                    Process.Start(link.Groups[1].Value);
-            }
-            else MessageBox.Show(Loc.F("You have the latest version ({0}).", cur), "LiteHub");
-        }
-        catch (Exception) { MessageBox.Show(Loc.T("Could not check for updates."), "LiteHub"); }
-        finally { if (!b.IsDisposed) b.Enabled = true; }
-    }
-
     void About()
     {
         Title("About");
@@ -490,7 +462,9 @@ class SettingsPanel : Panel
         Label l = Ui.Text("All your web accounts in one light window.\nEach account loads only when you open it and is freed when you stop using it.\n\nNo ads. No telemetry. Your logins stay on this PC.\nOpen source, MIT license.", 10.5f, false, true);
         l.Margin = new Padding(0, 10, 0, 14);
         Add(l);
-        Add(Ui.Row(RowWidth, "Check for updates", null, Ui.Btn("Check", 90, delegate(object s, EventArgs e) { CheckUpdate((Button)s); })));
+        Add(Ui.Row(RowWidth, "Check for updates", null, Ui.Btn("Check", 90, delegate { Updater.Run(true); })));
+        Add(Ui.Row(RowWidth, "Automatic updates", "Look for a new version when LiteHub starts and every few hours (contacts github.com), and ask before updating",
+            Ui.Switch(Cfg.AutoUpdate, delegate(object s, EventArgs e) { Cfg.AutoUpdate = ((Toggle)s).Checked; Cfg.Save(); })));
         Heading("Author and support");
         Add(Ui.Row(RowWidth, Log.Author, "Source code, questions and bug reports: GitHub Issues", Ui.Btn("Open GitHub", 130, delegate { OpenUrl(Log.RepoUrl); })));
         Add(Ui.Row(RowWidth, "Email", "Private questions and security reports", Ui.Btn("Email", 90, delegate { OpenUrl("mailto:" + Log.Email + "?subject=LiteHub"); })));

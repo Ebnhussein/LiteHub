@@ -348,6 +348,7 @@ static class Cfg
     public static int Startup;                // 0 off, 1 with Windows, 2 with Windows, hidden in the tray
     public static bool LeftNav = true, RailWide = true, Colorful, FilterDl, KeepInbox = true;
     public static bool Asked;                 // the first-start questions were answered
+    public static bool AutoUpdate = true;    // look for a newer release at start-up and every few hours
     public static bool LinkWa;               // WhatsApp links from the browser open in LiteHub
     public static string LinkAcct = "";       // account id that receives them, empty = ask each time
     public static bool Notify = true, BadgeList = true, BadgeTaskbar = true, HotkeyOn = true, CloseToTray = true;
@@ -383,6 +384,7 @@ static class Cfg
                     case "CloseToTray": CloseToTray = b; break;
                     case "Asked": Asked = b; break;
                     case "LinkWa": LinkWa = b; break;
+                    case "AutoUpdate": AutoUpdate = b; break;
                     case "LinkAcct": LinkAcct = v.Trim(); break;
                     case "Hotkey": Hotkey = v; break;
                     case "Lang": Lang = v.Trim(); break;
@@ -411,7 +413,7 @@ static class Cfg
         s.AppendLine("Lang=" + Lang); s.AppendLine("Workspace=" + Workspace.Replace("\r", "").Replace("\n", "")); s.AppendLine("KeepInbox=" + B(KeepInbox));
         s.AppendLine("DndUntil=" + DndUntil); s.AppendLine("MemCapMB=" + MemCapMB); s.AppendLine("ToastStyle=" + ToastStyle); s.AppendLine("UpdateUrl=" + UpdateUrl.Replace("\r", "").Replace("\n", "")); s.AppendLine("Hotkey=" + Hotkey); s.AppendLine("PassSalt=" + PassSalt); s.AppendLine("PassHash=" + PassHash);
         s.AppendLine("DownloadDir=" + DownloadDir.Replace("\r", "").Replace("\n", ""));
-        s.AppendLine("Asked=" + B(Asked)); s.AppendLine("LinkWa=" + B(LinkWa)); s.AppendLine("LinkAcct=" + LinkAcct.Replace("\r", "").Replace("\n", ""));
+        s.AppendLine("Asked=" + B(Asked)); s.AppendLine("LinkWa=" + B(LinkWa)); s.AppendLine("AutoUpdate=" + B(AutoUpdate)); s.AppendLine("LinkAcct=" + LinkAcct.Replace("\r", "").Replace("\n", ""));
         try
         {
             Directory.CreateDirectory(Paths.Data);

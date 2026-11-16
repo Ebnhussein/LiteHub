@@ -48,6 +48,7 @@ and gigabytes of memory. LiteHub is built the other way around:
 1. **Installed:** download `LiteHub-<version>-Setup.exe` from Releases and run it (per user, no admin rights, Start menu entry, removable from Windows Settings).
    **Portable:** download `LiteHub-<version>-portable.zip`, extract it anywhere (a USB stick works) and run `LiteHub.exe`. Everything is kept in the `data` folder next to it, nothing is written to the PC.
    (`LiteHub-<version>-win-x64.zip` is the plain program files without the portable marker.)
+   Setup has a **Browse...** button to choose the install folder. When a new version comes out, LiteHub offers to update itself (Installed copies only; portable copies open the download page).
 2. Silent install for scripts: `LiteHub-<version>-Setup.exe /S` (`/D=C:\folder` to choose the folder, `/NODESKTOP` to skip the desktop shortcut).
 3. Needs (Windows 10/11 with the Microsoft Edge WebView2 Runtime, which Windows already has.)
 4. The program is not code-signed yet, so Windows SmartScreen may warn the first time: **More info, Run anyway**.
@@ -59,7 +60,7 @@ Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub` (portable: t
 - No analytics, no accounts, no network calls of its own except fetching each platform's icon from that platform's own site.
 - Logins stay on your PC, one separate browser profile per account.
 - The inbox keeps notification text (message previews) in `%LOCALAPPDATA%\LiteHub\inbox.txt` unless you turn "Remember inbox" off; locked accounts store no text.
-- "Check for updates" only runs when you click it, and only if `UpdateUrl=` (a GitHub "latest release" API address) is set in `settings.txt`.
+- Update check: at start-up and every few hours LiteHub asks GitHub's public "latest release" address whether a newer version exists (nothing about you is sent). It then asks you before downloading; the installer is verified against its published SHA256. Turn it off in Settings > About > Automatic updates; "Check" there runs it on demand. The address is `UpdateUrl=` in `settings.txt`.
 - The passcode is stored as a salted PBKDF2 hash, never in clear text.
 - It does not read your messages; the web apps run exactly as in a normal browser.
 - The web engine is Microsoft's Edge WebView2, which follows your Windows diagnostic-data settings; LiteHub itself sends nothing.

@@ -167,6 +167,17 @@ class MainForm : Form
             TakeLink();
             Log.Info("window ready after " + Log.Clock.ElapsedMilliseconds + " ms, " + apps.Count + " accounts");
             StartWatchdog();
+            if (string.IsNullOrEmpty(Paths.TestData))
+            {
+                System.Windows.Forms.Timer ut = new System.Windows.Forms.Timer(); ut.Interval = 30000;
+                ut.Tick += delegate
+                {
+                    bool seen = Visible && WindowState != FormWindowState.Minimized;   // never pop up over a window hidden in the tray
+                    ut.Interval = Cfg.AutoUpdate && seen ? 6 * 3600 * 1000 : 60000;
+                    if (Cfg.AutoUpdate && seen) Updater.Run(false);
+                };
+                ut.Start();
+            }
             FetchMissingIcons();
             if (!string.IsNullOrEmpty(Paths.TestData))
             {   // test hooks: LITEHUB_TOAST=1 shows sample cards, LITEHUB_DROP=<file> drops a file on the first account

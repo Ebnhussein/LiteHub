@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+- Updates: LiteHub looks for a new version at start-up and every few hours and asks before updating; "Update now" downloads the installer, checks its SHA256 and installs over the current copy (Settings > About > Automatic updates turns it off).
+- Setup lets you choose the install folder (Browse...).
+
 ## 1.0.2
 - README download button always gets the newest installer (`LiteHub-Setup.exe` is now attached to every release).
 

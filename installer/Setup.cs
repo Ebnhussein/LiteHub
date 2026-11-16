@@ -34,8 +34,13 @@ static class Setup
         try
         {
             if (Has(args, "/uninstall")) return Uninstall(silent);
-            string dir = Arg(args, "/D=") ?? DefaultDir;
-            if (silent) { Install(dir, !Has(args, "/NODESKTOP")); return 0; }
+            string dir = SafeDir(Arg(args, "/D=") ?? DefaultDir);
+            if (silent)
+            {
+                Install(dir, !Has(args, "/NODESKTOP"));
+                if (Has(args, "/RUN")) Process.Start(Path.Combine(dir, App + ".exe"));   // used by the in-app updater
+                return 0;
+            }
             Application.EnableVisualStyles();
             Application.Run(new SetupForm(dir));
             return 0;
@@ -45,6 +50,15 @@ static class Setup
             if (!silent) MessageBox.Show(ex.Message, App + " Setup");
             return 1;
         }
+    }
+
+    // Uninstall deletes the whole folder, so never install straight into a folder that already holds other files:
+    // an existing LiteHub install (update) or an empty folder is used as it is, anything else gets a "LiteHub" subfolder.
+    public static string SafeDir(string dir)
+    {
+        dir = Path.GetFullPath(dir);
+        if (!Directory.Exists(dir) || File.Exists(Path.Combine(dir, App + ".exe")) || Directory.GetFileSystemEntries(dir).Length == 0) return dir;
+        return Path.Combine(dir, App);
     }
 
     public static void Install(string dir, bool desktop)
@@ -134,7 +148,17 @@ class SetupForm : Form
         try { logo.Image = new Icon(Icon, 48, 48).ToBitmap(); } catch (Exception) { }
         Label t = new Label(); t.Text = "LiteHub"; t.Font = new Font("Segoe UI Semibold", 18f); t.SetBounds(84, 22, 340, 34); t.AutoSize = false;
         Label sub = new Label(); sub.Text = "All your web accounts in one light window."; sub.ForeColor = Color.FromArgb(176, 174, 196); sub.SetBounds(86, 56, 340, 22);
-        Label where = new Label(); where.Text = "Install to:  " + dir; where.SetBounds(24, 96, 412, 22); where.AutoEllipsis = true;
+        Label where = new Label(); where.Text = "Install to:  " + dir; where.SetBounds(24, 98, 330, 22); where.AutoEllipsis = true;
+        Button browse = new Button(); browse.Text = "Browse..."; browse.SetBounds(356, 94, 80, 28); browse.FlatStyle = FlatStyle.Flat; browse.BackColor = Color.FromArgb(52, 50, 72); browse.ForeColor = Color.White;
+        browse.FlatAppearance.BorderSize = 0; browse.Cursor = Cursors.Hand;
+        browse.Click += delegate
+        {
+            using (FolderBrowserDialog fb = new FolderBrowserDialog())
+            {
+                fb.Description = "Choose where to install LiteHub"; fb.SelectedPath = dir;
+                if (fb.ShowDialog(this) == DialogResult.OK) { dir = Setup.SafeDir(fb.SelectedPath); where.Text = "Install to:  " + dir; }
+            }
+        };
         CheckBox desk = new CheckBox(); desk.Text = "Create a desktop shortcut"; desk.Checked = true; desk.SetBounds(24, 126, 300, 24);
         CheckBox run = new CheckBox(); run.Text = "Start LiteHub when setup finishes"; run.Checked = true; run.SetBounds(24, 152, 300, 24);
         Button go = new Button(); go.Text = "Install"; go.SetBounds(330, 200, 106, 32); go.FlatStyle = FlatStyle.Flat; go.BackColor = Color.FromArgb(91, 84, 232); go.ForeColor = Color.White;
@@ -150,6 +174,6 @@ class SetupForm : Form
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "LiteHub Setup"); go.Enabled = true; go.Text = "Install"; }
         };
-        Controls.AddRange(new Control[] { logo, t, sub, where, desk, run, go });
+        Controls.AddRange(new Control[] { logo, t, sub, where, browse, desk, run, go });
     }
 }
