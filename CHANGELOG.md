@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+- README download button always gets the newest installer (`LiteHub-Setup.exe` is now attached to every release).
+
 ## 1.0.1
 - WhatsApp links from the browser (whatsapp://, wa.me, api.whatsapp.com) open in LiteHub; pick the account each time or set a default (Settings > General).
 - First start asks what it needs: start with Windows and handling WhatsApp links.
