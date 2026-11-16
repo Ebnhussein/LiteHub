@@ -31,6 +31,7 @@ static class Setup
     static int Main(string[] args)
     {
         bool silent = Has(args, "/S");
+        if (!silent) Application.EnableVisualStyles();
         try
         {
             if (Has(args, "/uninstall")) return Uninstall(silent);
@@ -136,8 +137,13 @@ static class Setup
         string dir = null;
         using (RegistryKey k = Registry.CurrentUser.OpenSubKey(UninstallKey)) if (k != null) dir = k.GetValue("InstallLocation") as string;
         if (string.IsNullOrEmpty(dir)) dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        if (!silent && MessageBox.Show("Remove " + App + " from this PC?", App + " Setup", MessageBoxButtons.YesNo) != DialogResult.Yes) return 0;
-        bool wipe = !silent && MessageBox.Show("Also delete your accounts, logins and settings?\n(Choose No to keep them for a later install.)", App + " Setup", MessageBoxButtons.YesNo) == DialogResult.Yes;
+        bool wipe = false;
+        if (!silent)
+            using (SetupDialog q = new SetupDialog("Remove " + App, "Remove " + App + " from this PC?", "Also delete my accounts, logins and settings (this cannot be undone)", "Remove", "Cancel"))
+            {
+                if (q.ShowDialog() != DialogResult.OK) return 0;
+                wipe = q.Checked;
+            }
         foreach (Process p in Process.GetProcessesByName(App)) { try { p.Kill(); p.WaitForExit(5000); } catch (Exception) { } }
         foreach (string f in new string[] { StartMenuLink, DesktopLink }) { try { if (LinkInto(f, dir)) File.Delete(f); } catch (Exception) { } }   // only our own shortcuts
         Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
@@ -151,7 +157,7 @@ static class Setup
             Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 3 127.0.0.1 >nul & rmdir /s /q \"" + dir + "\"") { CreateNoWindow = true, UseShellExecute = false });
         }
         else try { Directory.Delete(dir, true); } catch (Exception) { }
-        if (!silent) MessageBox.Show(App + " was removed.", App + " Setup");
+        if (!silent) using (SetupDialog done = new SetupDialog(App + " removed", App + " was removed from this PC." + (wipe ? "" : Environment.NewLine + "Your accounts and settings were kept for a later install."), null, "Close", null)) done.ShowDialog();
         return 0;
     }
 }
@@ -195,5 +201,41 @@ class SetupForm : Form
             catch (Exception ex) { MessageBox.Show(ex.Message, "LiteHub Setup"); go.Enabled = true; go.Text = "Install"; }
         };
         Controls.AddRange(new Control[] { logo, t, sub, where, browse, desk, run, go });
+    }
+}
+
+// Message box in the same look as the installer window: logo, text, an optional tick box and one or two buttons.
+class SetupDialog : Form
+{
+    readonly CheckBox box;
+    public bool Checked { get { return box != null && box.Checked; } }
+
+    public SetupDialog(string title, string text, string check, string ok, string cancel)
+    {
+        Text = title; FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false; MinimizeBox = false;
+        StartPosition = FormStartPosition.CenterScreen; Font = new Font("Segoe UI", 9.5f);
+        BackColor = Color.FromArgb(29, 28, 41); ForeColor = Color.White;
+        ClientSize = new Size(440, check == null ? 170 : 226);
+        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
+        PictureBox logo = new PictureBox(); logo.SetBounds(24, 24, 44, 44); logo.SizeMode = PictureBoxSizeMode.Zoom;
+        try { logo.Image = new Icon(Icon, 48, 48).ToBitmap(); } catch (Exception) { }
+        Label msg = new Label(); msg.Text = text; msg.Font = new Font("Segoe UI Semibold", 11.5f); msg.SetBounds(86, 24, 334, 70); msg.AutoSize = false;
+        Controls.Add(logo); Controls.Add(msg);
+        if (check != null)
+        {
+            box = new CheckBox(); box.Text = check; box.SetBounds(86, 104, 334, 48); box.ForeColor = Color.FromArgb(255, 176, 128);
+            Controls.Add(box);
+        }
+        int y = ClientSize.Height - 54;
+        Button yes = new Button(); yes.Text = ok; yes.SetBounds(ClientSize.Width - 24 - 112, y, 112, 34); yes.FlatStyle = FlatStyle.Flat;
+        yes.BackColor = check != null ? Color.FromArgb(214, 69, 65) : Color.FromArgb(91, 84, 232); yes.ForeColor = Color.White;
+        yes.FlatAppearance.BorderSize = 0; yes.Cursor = Cursors.Hand; yes.DialogResult = DialogResult.OK;
+        Controls.Add(yes); AcceptButton = yes;
+        if (cancel != null)
+        {
+            Button no = new Button(); no.Text = cancel; no.SetBounds(yes.Left - 10 - 100, y, 100, 34); no.FlatStyle = FlatStyle.Flat;
+            no.BackColor = Color.FromArgb(52, 50, 72); no.ForeColor = Color.White; no.FlatAppearance.BorderSize = 0; no.Cursor = Cursors.Hand; no.DialogResult = DialogResult.Cancel;
+            Controls.Add(no); CancelButton = no;
+        }
     }
 }

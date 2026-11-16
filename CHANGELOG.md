@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.3
+- Uninstall uses LiteHub-styled windows: one confirmation with an optional "also delete my accounts, logins and settings" tick box, then a closing message.
+
 ## 1.3.2
 - The WhatsApp link handler never remembers another LiteHub copy as the app to give the link back to; uninstall then simply removes the handler.
 
