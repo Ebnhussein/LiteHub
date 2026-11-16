@@ -112,6 +112,25 @@ static class Setup
         return !string.IsNullOrEmpty(target) && target.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase);
     }
 
+    // Undo what LiteHub itself registered (only if it still points into this install folder): start with Windows and the WhatsApp link handler.
+    static void Unregister(string dir)
+    {
+        string full = Path.GetFullPath(dir);
+        using (RegistryKey run = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+            if (run != null && (run.GetValue(App) as string ?? "").IndexOf(full, StringComparison.OrdinalIgnoreCase) >= 0) run.DeleteValue(App, false);
+        const string wa = @"Software\Classes\whatsapp";
+        string cmd, prev;
+        using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa + @"\shell\open\command")) cmd = k == null ? null : k.GetValue("") as string;
+        if (cmd == null || cmd.IndexOf(full, StringComparison.OrdinalIgnoreCase) < 0) return;
+        using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa)) prev = k.GetValue("LiteHubPrev") as string;
+        if (prev == null) { Registry.CurrentUser.DeleteSubKeyTree(wa, false); return; }   // nothing was there before us
+        using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa, true))
+        {
+            using (RegistryKey c = k.CreateSubKey(@"shell\open\command")) c.SetValue("", prev);
+            k.DeleteValue("LiteHubPrev");
+        }
+    }
+
     static int Uninstall(bool silent)
     {
         string dir = null;
@@ -122,6 +141,7 @@ static class Setup
         foreach (Process p in Process.GetProcessesByName(App)) { try { p.Kill(); p.WaitForExit(5000); } catch (Exception) { } }
         foreach (string f in new string[] { StartMenuLink, DesktopLink }) { try { if (LinkInto(f, dir)) File.Delete(f); } catch (Exception) { } }   // only our own shortcuts
         Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
+        try { Unregister(dir); } catch (Exception) { }
         if (wipe) { try { Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), App), true); } catch (Exception) { } }
         // this exe lives in the folder being removed: let a helper delete it once we have exited
         string me = Assembly.GetExecutingAssembly().Location;

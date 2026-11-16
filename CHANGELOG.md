@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+- Uninstall also removes the start-with-Windows entry and gives the WhatsApp link back to its previous app.
+- Clear messages when the WebView2 runtime is missing or when a portable copy sits on a read-only drive.
+- The WhatsApp link chooser never offers accounts of a locked workspace.
+
 ## 1.2.1
 - Workspace password now guards opening: a protected workspace asks for its password every time it is opened (also after a restart), and "All" and the quick switcher hide it until then. Its accounts raise no alerts while it is locked.
 

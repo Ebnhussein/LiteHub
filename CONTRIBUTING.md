@@ -1,20 +1,9 @@
 # Contributing
 
-Thanks for helping. Bugs and ideas: open an issue (please use the bug-report template, or *Settings > About > Report a problem* in the app).
+Thanks for helping. Bugs and ideas: open an issue (Settings > About > Report a problem copies the diagnostics for you).
 
-## Build
-
-```
-build.bat
-bin\LiteHub.exe --selftest        (exit code 0 = built-in checks pass)
-```
-
-Only the .NET Framework C# compiler that ships with Windows is needed (C# 5 syntax). WebView2 DLLs are in `lib\`.
-
-## Before a pull request
-
-- `--selftest` must pass. It checks parsers, passcode hashing, the translation table and the colour contrast of the palette.
-- Use the design tokens (`Ds.cs`, `Pal` in `Core.cs`, see DESIGN.md); no raw colours, radii or font sizes.
-- User-visible text goes through `Loc.T` and gets a row in `Loc.cs` for every language.
-- Never test destructive flows (reset, wipe, uninstall) on your real data: set `LITEHUB_DATA` to a throw-away folder.
-- Keep logs free of message text, passwords and account names (`Log.Who(account)` gives `site#number`).
+- Build: `build.bat`, then `bin\LiteHub.exe --selftest` (exit code 0 means the built-in checks pass). Needs only what ships with Windows.
+- Keep changes small and match the surrounding style (plain C# 5, no extra dependencies).
+- New text for the interface goes in `Loc.cs` as one row for all 8 languages.
+- Do not log message text or passwords.
+- Security problems: email, do not open a public issue (see SECURITY.md).

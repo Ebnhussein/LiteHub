@@ -1339,7 +1339,7 @@ class MainForm : Form
     {
         string url = WaUrl(raw);
         if (url == null) { Log.Warn("ignored a link that is not a WhatsApp address"); return; }
-        List<AppDef> was = apps.FindAll(delegate(AppDef x) { return HostOf(x.Url).EndsWith("whatsapp.com"); });
+        List<AppDef> was = apps.FindAll(delegate(AppDef x) { return HostOf(x.Url).EndsWith("whatsapp.com") && (!Cfg.HasWsPass(x.Workspace) || unlockedWs.Contains(x.Workspace)); });   // never a locked workspace's account
         if (was.Count == 0) { MessageBox.Show(this, Loc.T("Add a WhatsApp account first."), "LiteHub"); return; }
         AppDef pick = was.Find(delegate(AppDef x) { return x.Id == Cfg.LinkAcct; });
         if (pick == null && was.Count == 1) pick = was[0];
@@ -1871,10 +1871,23 @@ class MainForm : Form
                 try { System.Threading.EventWaitHandle.OpenExisting("LiteHub.show" + Paths.Tag).Set(); } catch (Exception) { }
                 return;
             }
-            Directory.CreateDirectory(Paths.Data);
+            try { Directory.CreateDirectory(Paths.Data); string probe = Path.Combine(Paths.Data, ".write-test"); File.WriteAllText(probe, ""); File.Delete(probe); }
+            catch (Exception)
+            {   // a portable copy on a read-only drive, or a folder without write access
+                MessageBox.Show(Loc.F("LiteHub cannot save its data in {0}. Copy the folder to your PC, or use the installed version.", Paths.Data), "LiteHub");
+                return;
+            }
             if (link != null) try { File.WriteAllText(Path.Combine(Paths.Data, "link.txt"), link); } catch (Exception) { }
             Cfg.Load(); Loc.Set(Cfg.Lang);
             Log.Startup();
+            string wv = null;
+            try { wv = CoreWebView2Environment.GetAvailableBrowserVersionString(); } catch (Exception) { }
+            if (string.IsNullOrEmpty(wv))
+            {
+                if (MessageBox.Show(Loc.T("Microsoft Edge WebView2 Runtime is needed and was not found. Open its download page?"), "LiteHub", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    try { System.Diagnostics.Process.Start("https://go.microsoft.com/fwlink/p/?LinkId=2124703"); } catch (Exception) { }
+                return;
+            }
             Pal.Update();
             bool bg = Array.IndexOf(args, "--background") >= 0;
             if (File.Exists(ResetMarker)) WipeLogins();

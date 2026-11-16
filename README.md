@@ -51,7 +51,7 @@ and gigabytes of memory. LiteHub is built the other way around:
    Setup has a **Browse...** button to choose the install folder. When a new version comes out, LiteHub offers to update itself (Installed copies only; portable copies open the download page).
 2. Silent install for scripts: `LiteHub-<version>-Setup.exe /S` (`/D=C:\folder` to choose the folder, `/NODESKTOP` to skip the desktop shortcut).
 3. Needs (Windows 10/11 with the Microsoft Edge WebView2 Runtime, which Windows already has.)
-4. The program is not code-signed yet, so Windows SmartScreen may warn the first time: **More info, Run anyway**.
+4. The program is not code-signed yet (a signing certificate costs money), so Windows SmartScreen may show "Windows protected your PC" the first time: click **More info**, then **Run anyway**. You can compare the file with the `.sha256` file next to it on the Releases page, and the full source is in this repository.
 
 Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub` (portable: the `data` folder next to `LiteHub.exe`). Delete that folder to reset everything. Removing an account asks whether to delete its saved login too. If you forget the launch passcode, "Forgot passcode?" removes it and signs you out of every account (the passcode protects those logins, so it cannot be bypassed without losing them).
 
@@ -59,6 +59,7 @@ Your accounts, logins and settings live in `%LOCALAPPDATA%\LiteHub` (portable: t
 
 - No analytics, no accounts, no network calls of its own except fetching each platform's icon from that platform's own site.
 - Logins stay on your PC, one separate browser profile per account.
+- Passcodes and workspace passwords lock LiteHub's own window; they do not encrypt the login files on disk (Windows account protection and disk encryption such as BitLocker do that).
 - The inbox keeps notification text (message previews) in `%LOCALAPPDATA%\LiteHub\inbox.txt` unless you turn "Remember inbox" off; locked accounts store no text.
 - Update check: at start-up and every few hours LiteHub asks GitHub's public "latest release" address whether a newer version exists (nothing about you is sent). It then asks you before downloading; the installer is verified against its published SHA256. Turn it off in Settings > About > Automatic updates; "Check" there runs it on demand. The address is `UpdateUrl=` in `settings.txt`.
 - The passcode is stored as a salted PBKDF2 hash, never in clear text.
