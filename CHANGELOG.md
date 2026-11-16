@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+- Workspaces stay apart: the quick switcher (Ctrl+K), Ctrl+1..9, the tray menu and the Inbox only show the accounts of the workspace you are in.
+- Workspace password: set one from the workspace menu; leaving a protected workspace (to another one, or moving its accounts out) asks for it. Inside a protected workspace, other workspaces raise no alerts.
+
+## 1.1.1
+- One message, one alert: the bare "new messages" alert no longer shows before the detailed one.
+- Settings > Notifications > Hide message details: alerts (and the Inbox) say only which account has a new message, never the sender or the text.
+
 ## 1.1.0
 - Updates: LiteHub looks for a new version at start-up and every few hours and asks before updating; "Update now" downloads the installer, checks its SHA256 and installs over the current copy (Settings > About > Automatic updates turns it off).
 - Setup lets you choose the install folder (Browse...).

@@ -382,10 +382,25 @@ class MainForm : Form
         return l;
     }
 
+    // Leaving a workspace that has a password (switching to another, or moving one of its accounts out) asks for it.
+    bool LeaveOk(string ws)
+    {
+        if (!Cfg.HasWsPass(ws)) return true;
+        string p = Dialogs.Ask("Workspace", "Enter the password of this workspace to leave it", "", true);
+        if (p == null) return false;
+        if (Cfg.CheckWsPass(ws, p)) return true;
+        MessageBox.Show(Loc.T("Wrong password."), "LiteHub");
+        return false;
+    }
+
+    // The n-th account (0-based) of the workspace on screen, for Ctrl+1..9
+    AppDef NthInWs(int n) { List<AppDef> l = apps.FindAll(InWs); return n >= 0 && n < l.Count ? l[n] : null; }
+
     public void SetWorkspace(string w)
     {
+        if (w == Cfg.Workspace || !LeaveOk(Cfg.Workspace)) return;
         Cfg.Workspace = w; Cfg.Save();
-        if (wsBtn != null) wsBtn.Text = w == "" ? Loc.T("All") : w;
+        if (wsBtn != null) { wsBtn.Text = w == "" ? Loc.T("All") : w; ((RoundButton)toolBtns[4]).Badge = InboxUnread; toolBtns[4].Invalidate(); }
         LayoutIcons();
         if (active != null && !InWs(active)) { AppDef f = apps.Find(InWs); if (f != null) ShowApp(f); }
     }
@@ -408,12 +423,33 @@ class MainForm : Form
             items.Add(new PaletteItem { Text = w, Hint = Cfg.Workspace == w ? "\u2713" : "" }); acts.Add(delegate { SetWorkspace(name); });
         }
         items.Add(new PaletteItem { Text = Loc.T("New workspace...") }); acts.Add(delegate { string n = AskWorkspace(); if (n.Length > 0) SetWorkspace(n); });
+        if (Cfg.Workspace.Length > 0)
+        {
+            string cur = Cfg.Workspace;
+            if (!Cfg.HasWsPass(cur))
+            {
+                items.Add(new PaletteItem { Text = Loc.T("Set a password for this workspace...") });
+                acts.Add(delegate
+                {
+                    string p1 = Dialogs.Ask("Workspace", "New password (needed to leave this workspace)", "", true);
+                    if (p1 == null || p1.Length == 0) return;
+                    string p2 = Dialogs.Ask("Workspace", "Repeat the password", "", true);
+                    if (p1 == p2) { Cfg.SetWsPass(cur, p1); Cfg.Save(); } else MessageBox.Show(Loc.T("The passwords do not match."), "LiteHub");
+                });
+            }
+            else
+            {
+                items.Add(new PaletteItem { Text = Loc.T("Remove the password of this workspace...") });
+                acts.Add(delegate { if (LeaveOk(cur)) { Cfg.SetWsPass(cur, null); Cfg.Save(); } });
+            }
+        }
         palette = new PalettePanel(items, delegate(int i) { if (i >= 0) acts[i](); }, "Workspaces");
         palette.ShowIn(host);
     }
 
     void MoveToWorkspace(AppDef a, string w)
     {
+        if (w != a.Workspace && !LeaveOk(a.Workspace)) return;
         a.Workspace = w; SaveApps(); LayoutIcons();
         if (a == active && !InWs(a)) { AppDef f = apps.Find(InWs); if (f != null) ShowApp(f); }
     }
@@ -487,7 +523,7 @@ class MainForm : Form
     {
         if (palette != null && !palette.IsDisposed) { palette.Close(); palette = null; }
         List<PaletteItem> items = new List<PaletteItem>(); List<AppDef> targets = new List<AppDef>();
-        foreach (AppDef a in apps) { items.Add(new PaletteItem { Text = a.Name, Dot = a.AccentColor, Hint = a.Workspace }); targets.Add(a); }
+        foreach (AppDef a in apps) { if (!InWs(a)) continue; items.Add(new PaletteItem { Text = a.Name, Dot = a.AccentColor, Hint = a.Workspace }); targets.Add(a); }
         palette = new PalettePanel(items, delegate(int i) { if (i >= 0) SendFiles(targets[i], files); });
         palette.ShowIn(host);
     }
@@ -606,6 +642,7 @@ class MainForm : Form
         List<PaletteItem> items = new List<PaletteItem>(); List<Action> acts = new List<Action>();
         foreach (AppDef a in apps)
         {
+            if (!InWs(a)) continue;   // a workspace stays apart from the others
             AppDef x = a;
             items.Add(new PaletteItem { Text = a.Name, Dot = a.AccentColor, Hint = a.Unread > 0 ? a.Unread + " new" : a.Workspace });
             acts.Add(delegate { ShowApp(x); });
@@ -629,7 +666,7 @@ class MainForm : Form
     public class InboxItem { public AppDef App; public string Title, Body; public DateTime Time; public bool Read; }
     public readonly List<InboxItem> Inbox = new List<InboxItem>();
     public Action InboxChanged;
-    public int InboxUnread { get { return Inbox.FindAll(delegate(InboxItem i) { return !i.Read; }).Count; } }
+    public int InboxUnread { get { return Inbox.FindAll(delegate(InboxItem i) { return !i.Read && InWs(i.App); }).Count; } }
 
     void AddInbox(AppDef a, string title, string body)
     {
@@ -712,7 +749,7 @@ class MainForm : Form
         if (keyData == (Keys.Control | Keys.Tab)) { CycleAccount(1); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.Tab)) { CycleAccount(-1); return true; }
         int n = (int)(keyData & Keys.KeyCode) - (int)Keys.D1;
-        if ((keyData & Keys.Modifiers) == Keys.Control && n >= 0 && n < 9 && n < apps.Count) { ShowApp(apps[n]); return true; }
+        if ((keyData & Keys.Modifiers) == Keys.Control && n >= 0 && n < 9 && NthInWs(n) != null) { ShowApp(NthInWs(n)); return true; }
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
@@ -1127,6 +1164,7 @@ class MainForm : Form
         if (apps.Count > 0) m.Items.Add(new ToolStripSeparator());
         foreach (AppDef a in apps)
         {
+            if (!InWs(a)) continue;
             AppDef x = a;
             ToolStripMenuItem it = Row(a.Name + (a.Unread > 0 ? "   " + a.Unread : ""), a.Icon, delegate { Restore(); ShowApp(x); });
             it.Checked = false; m.Items.Add(it);
@@ -1457,17 +1495,18 @@ class MainForm : Form
                 if (k == (int)Keys.K) { e.Handled = true; BeginInvoke(new Action(OpenPalette)); }
                 else if (k == (int)Keys.B && Cfg.LeftNav) { e.Handled = true; BeginInvoke(new Action(ToggleRail)); }
                 else if (k == (int)Keys.Tab) { e.Handled = true; int dir = (Control.ModifierKeys & Keys.Shift) != 0 ? -1 : 1; BeginInvoke(new Action(delegate { CycleAccount(dir); })); }
-                else if (n >= 0 && n < 9 && n < apps.Count) { e.Handled = true; BeginInvoke(new Action(delegate { ShowApp(apps[n]); })); }
+                else if (n >= 0 && n < 9 && NthInWs(n) != null) { e.Handled = true; AppDef nth = NthInWs(n); BeginInvoke(new Action(delegate { ShowApp(nth); })); }
             };
             c.NotificationReceived += delegate(object s, CoreWebView2NotificationReceivedEventArgs e)
             {   // the system toast still shows; this only keeps a copy for the Inbox
                 string nt = e.Notification.Title, nb = e.Notification.Body;
                 NLog(Log.Who(a) + ": notification received (do not disturb " + Cfg.DndActive + ", locked " + a.Locked + ")");
                 a.LastNotified = DateTime.Now;
-                if (a.Locked) { nt = ""; nb = Loc.T("New message"); }
+                bool hide = a.Locked || Cfg.HideBody;
+                if (hide) { nt = ""; nb = Loc.T("New message"); }
                 bool ours = Cfg.ToastStyle == 0;
-                if (Cfg.DndActive || a.Locked || ours) e.Handled = true;   // no Windows pop-up (ours, or none); a locked account never shows its text
-                if (!Cfg.DndActive && (ours || a.Locked)) { string tt = nt, tb = nb; BeginInvoke(new Action(delegate { ShowToast(a, tt, tb); })); }
+                if (Cfg.DndActive || hide || ours) e.Handled = true;   // no Windows pop-up (ours, or none); a locked account or the privacy option never shows the text
+                if (!Cfg.DndActive && (ours || hide)) { string tt = nt, tb = nb; BeginInvoke(new Action(delegate { ShowToast(a, tt, tb); })); }
                 BeginInvoke(new Action(delegate { AddInbox(a, nt, nb); }));
             };
             c.PermissionRequested += delegate(object s, CoreWebView2PermissionRequestedEventArgs e)
@@ -1679,14 +1718,27 @@ class MainForm : Form
         bool covered = (DateTime.Now - a.LastNotified).TotalSeconds < 8;
         NLog(Log.Who(a) + ": unread +" + n + " (looking " + looking + ", covered by a notification " + covered + ")");
         if (looking || covered) return;
-        AddInbox(a, a.Locked ? "" : Loc.T("New messages"), Loc.F("{0} new", n));
-        ShowToast(a, a.Locked ? "" : Loc.T("New messages"), a.Locked ? Loc.T("New message") : Loc.F("{0} new", n));
+        // The page's own notification (with the real text) usually follows the count change by a moment: wait for it,
+        // so one message gives one alert instead of a bare "new messages" followed by the detailed one.
+        DateTime t0 = DateTime.Now;
+        System.Windows.Forms.Timer w = new System.Windows.Forms.Timer(); w.Interval = 3000;
+        w.Tick += delegate
+        {
+            w.Stop(); w.Dispose();
+            if (a.LastNotified >= t0 || !apps.Contains(a)) return;
+            a.LastNotified = DateTime.Now;
+            bool hide = a.Locked || Cfg.HideBody;
+            AddInbox(a, hide ? "" : Loc.T("New messages"), hide ? Loc.T("New message") : Loc.F("{0} new", n));
+            ShowToast(a, hide ? "" : Loc.T("New messages"), hide ? Loc.T("New message") : Loc.F("{0} new", n));
+        };
+        w.Start();
     }
 
     // The desktop alert: LiteHub's own card, or the plain Windows balloon if you chose that.
     public void ShowToast(AppDef a, string title, string body)
     {
         if (!Cfg.Notify || !a.Notify || Cfg.DndActive) return;
+        if (Cfg.HasWsPass(Cfg.Workspace) && !InWs(a)) return;   // inside a protected workspace, other workspaces stay silent
         if (Cfg.ToastStyle == 1) { balloonApp = a; tray.ShowBalloonTip(4000, a.Name, title.Length == 0 ? body : title + ": " + body, ToolTipIcon.Info); return; }
         Toast.Show(a, title, body, delegate { Restore(); ShowApp(a); });
     }

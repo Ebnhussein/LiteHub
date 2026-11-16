@@ -244,6 +244,8 @@ class SettingsPanel : Panel
         Add(Ui.Row(w, "Notification style", "How alerts look on your desktop",
             Ui.Combo(new string[] { "LiteHub card", "Windows notification" }, Cfg.ToastStyle, 190,
                 delegate(object s, EventArgs e) { Cfg.ToastStyle = ((ComboBox)s).SelectedIndex; Cfg.Save(); })));
+        Add(Ui.Row(w, "Hide message details", "Alerts only say which account has a new message, never the sender or the text (for privacy)",
+            Ui.Switch(Cfg.HideBody, delegate(object s, EventArgs e) { Cfg.HideBody = ((Toggle)s).Checked; Cfg.Save(); })));
         Add(Ui.Row(w, "Preview", "Show a sample card", Ui.Btn("Preview", 100, delegate { m.ToastSample(); })));
         bool dnd = Cfg.DndActive; int off = dnd ? 1 : 0;
         int[] mins = { 0, 30, 60, 120, -1 };

@@ -348,6 +348,7 @@ static class Cfg
     public static int Startup;                // 0 off, 1 with Windows, 2 with Windows, hidden in the tray
     public static bool LeftNav = true, RailWide = true, Colorful, FilterDl, KeepInbox = true;
     public static bool Asked;                 // the first-start questions were answered
+    public static bool HideBody;             // notifications say which account has news, never the sender or the text
     public static bool AutoUpdate = true;    // look for a newer release at start-up and every few hours
     public static bool LinkWa;               // WhatsApp links from the browser open in LiteHub
     public static string LinkAcct = "";       // account id that receives them, empty = ask each time
@@ -385,6 +386,7 @@ static class Cfg
                     case "Asked": Asked = b; break;
                     case "LinkWa": LinkWa = b; break;
                     case "AutoUpdate": AutoUpdate = b; break;
+                    case "HideBody": HideBody = b; break;
                     case "LinkAcct": LinkAcct = v.Trim(); break;
                     case "Hotkey": Hotkey = v; break;
                     case "Lang": Lang = v.Trim(); break;
@@ -396,6 +398,7 @@ static class Cfg
                     case "UpdateUrl": if (v.Trim().Length > 0) UpdateUrl = v.Trim(); break;
                     case "PassSalt": PassSalt = v; break;
                     case "PassHash": PassHash = v; break;
+                    case "WsPass": { string[] w3 = v.Split('|'); if (w3.Length == 3 && w3[0].Length > 0) WsPass[w3[0]] = w3[1] + "|" + w3[2]; break; }
                     case "DownloadDir": DownloadDir = v; break;
                 }
             }
@@ -412,8 +415,9 @@ static class Cfg
         s.AppendLine("HotkeyOn=" + B(HotkeyOn)); s.AppendLine("CloseToTray=" + B(CloseToTray));
         s.AppendLine("Lang=" + Lang); s.AppendLine("Workspace=" + Workspace.Replace("\r", "").Replace("\n", "")); s.AppendLine("KeepInbox=" + B(KeepInbox));
         s.AppendLine("DndUntil=" + DndUntil); s.AppendLine("MemCapMB=" + MemCapMB); s.AppendLine("ToastStyle=" + ToastStyle); s.AppendLine("UpdateUrl=" + UpdateUrl.Replace("\r", "").Replace("\n", "")); s.AppendLine("Hotkey=" + Hotkey); s.AppendLine("PassSalt=" + PassSalt); s.AppendLine("PassHash=" + PassHash);
+        foreach (KeyValuePair<string, string> kv in WsPass) s.AppendLine("WsPass=" + kv.Key + "|" + kv.Value);
         s.AppendLine("DownloadDir=" + DownloadDir.Replace("\r", "").Replace("\n", ""));
-        s.AppendLine("Asked=" + B(Asked)); s.AppendLine("LinkWa=" + B(LinkWa)); s.AppendLine("AutoUpdate=" + B(AutoUpdate)); s.AppendLine("LinkAcct=" + LinkAcct.Replace("\r", "").Replace("\n", ""));
+        s.AppendLine("Asked=" + B(Asked)); s.AppendLine("LinkWa=" + B(LinkWa)); s.AppendLine("AutoUpdate=" + B(AutoUpdate)); s.AppendLine("HideBody=" + B(HideBody)); s.AppendLine("LinkAcct=" + LinkAcct.Replace("\r", "").Replace("\n", ""));
         try
         {
             Directory.CreateDirectory(Paths.Data);
@@ -436,6 +440,26 @@ static class Cfg
         using (RNGCryptoServiceProvider r = new RNGCryptoServiceProvider()) r.GetBytes(salt);
         PassSalt = Convert.ToBase64String(salt);
         PassHash = Hash(pass, salt);
+    }
+
+    // ----- workspace passwords: leaving a protected workspace needs its password (same salted PBKDF2) -----
+    public static readonly Dictionary<string, string> WsPass = new Dictionary<string, string>();   // workspace -> "salt|hash"
+    public static bool HasWsPass(string w) { return w.Length > 0 && WsPass.ContainsKey(w); }
+
+    public static void SetWsPass(string w, string pass)
+    {
+        if (pass == null || pass.Length == 0) { WsPass.Remove(w); return; }
+        byte[] salt = new byte[16];
+        using (RNGCryptoServiceProvider r = new RNGCryptoServiceProvider()) r.GetBytes(salt);
+        WsPass[w] = Convert.ToBase64String(salt) + "|" + Hash(pass, salt);
+    }
+
+    public static bool CheckWsPass(string w, string pass)
+    {
+        string v;
+        if (!WsPass.TryGetValue(w, out v)) return true;
+        string[] p = v.Split('|');
+        return pass != null && Hash(pass, Convert.FromBase64String(p[0])) == p[1];
     }
 
     public static bool CheckPass(string pass)
@@ -635,6 +659,11 @@ static class Util
         Cfg.SetPass(null);
         ok = ok && !Cfg.HasPass && Cfg.CheckPass("anything");
         Cfg.PassSalt = salt; Cfg.PassHash = hash;
+        const string ws = "selftest-ws";   // workspace passwords: right one passes, wrong or empty one fails, removing it unlocks
+        Cfg.SetWsPass(ws, "w@s");
+        ok = ok && Cfg.HasWsPass(ws) && Cfg.CheckWsPass(ws, "w@s") && !Cfg.CheckWsPass(ws, "nope") && !Cfg.CheckWsPass(ws, null);
+        Cfg.SetWsPass(ws, null);
+        ok = ok && !Cfg.HasWsPass(ws) && Cfg.CheckWsPass(ws, "anything");
         return ok;
     }
 
