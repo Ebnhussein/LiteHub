@@ -331,6 +331,7 @@ static class Dialogs
         f.Text = Loc.T(title); f.FormBorderStyle = FormBorderStyle.FixedDialog; f.StartPosition = FormStartPosition.CenterScreen;
         f.MaximizeBox = false; f.MinimizeBox = false; f.ShowInTaskbar = false; f.TopMost = true;
         f.ClientSize = new Size(w, h); f.BackColor = Pal.Page; f.ForeColor = Pal.Text; f.Font = new Font("Segoe UI", 9.5f);
+        if (Loc.IsRtl) { f.RightToLeft = RightToLeft.Yes; f.RightToLeftLayout = true; }
         return f;
     }
 

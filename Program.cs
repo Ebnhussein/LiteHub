@@ -78,6 +78,7 @@ class MainForm : Form
         locked = Cfg.HasPass && background;
         Text = "LiteHub";
         Icon = AppIcon;
+        if (Loc.IsRtl) { RightToLeft = RightToLeft.Yes; RightToLeftLayout = true; }   // Arabic: the whole window is mirrored
         Size = new Size(1280, 800);
         MinimumSize = new Size(700, 450);
         StartPosition = FormStartPosition.CenterScreen;
@@ -1733,7 +1734,8 @@ class MainForm : Form
         w.Tick += delegate
         {
             w.Stop(); w.Dispose();
-            if (a.LastNotified >= t0 || !apps.Contains(a)) return;
+            if (a.LastNotified >= t0 || !apps.Contains(a)) { NLog(Log.Who(a) + ": count-only alert skipped, the real notification came"); return; }
+            NLog(Log.Who(a) + ": count-only alert shown, no notification came");
             a.LastNotified = DateTime.Now;
             bool hide = a.Locked || Cfg.HideBody;
             AddInbox(a, hide ? "" : Loc.T("New messages"), hide ? Loc.T("New message") : Loc.F("{0} new", n));

@@ -229,7 +229,7 @@ static class Loc
         "Light|فاتح|Claro|Clair|Hell|Claro|Açık|Светлая",
         "Dark|داكن|Oscuro|Sombre|Dunkel|Escuro|Koyu|Тёмная",
         "App layout|تخطيط البرنامج|Diseño|Disposition|Layout|Layout|Düzen|Расположение",
-        "Account icons on the top bar or on the left|أيقونات الحسابات في الشريط العلوي أو على اليسار|Iconos de cuentas arriba o a la izquierda|Icônes des comptes en haut ou à gauche|Konto-Symbole oben oder links|Ícones das contas no topo ou à esquerda|Hesap simgeleri üstte veya solda|Значки аккаунтов сверху или слева",
+        "Account icons on the top bar or on the left|أيقونات الحسابات في الشريط العلوي أو على الجانب|Iconos de cuentas arriba o a la izquierda|Icônes des comptes en haut ou à gauche|Konto-Symbole oben oder links|Ícones das contas no topo ou à esquerda|Hesap simgeleri üstte veya solda|Значки аккаунтов сверху или слева",
         "Top navigation|تنقل علوي|Navegación superior|Navigation en haut|Navigation oben|Navegação superior|Üst gezinme|Сверху",
         "Left navigation|تنقل جانبي|Navegación izquierda|Navigation à gauche|Navigation links|Navegação esquerda|Sol gezinme|Слева",
         "Colorful menus|قوائم ملونة|Menús de colores|Menus colorés|Farbige Menüs|Menus coloridos|Renkli menüler|Цветные меню",

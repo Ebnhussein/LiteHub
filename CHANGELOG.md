@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+- Arabic now mirrors the whole window (side bar on the right, rows and dialogs right to left).
+- Log lines say when a count-only alert was skipped because the real notification came, or shown because none came.
+- Arabic wording fix in the layout setting.
+
 ## 1.2.2
 - Uninstall also removes the start-with-Windows entry and gives the WhatsApp link back to its previous app.
 - Clear messages when the WebView2 runtime is missing or when a portable copy sits on a read-only drive.
