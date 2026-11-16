@@ -33,7 +33,7 @@ and gigabytes of memory. LiteHub is built the other way around:
 - **Import accounts** (Add account, then "Import from a browser..."): picks up the Google accounts of your Chrome profiles and the services found in the bookmarks of Chrome, Edge, Brave, Vivaldi and Opera, or from an exported bookmarks file; one click adds them all. Read locally only; logins cannot be copied from a browser, so you sign in once per account.
 - **Notification cards:** alerts appear as LiteHub's own glass cards (account icon, title, text) at the bottom-right, stacked, click to open the account; Settings > Notifications can switch back to plain Windows notifications.
 - **Drag and drop to send:** drop files or photos on an account's icon (or on the logo to choose one) and LiteHub opens it and drops them into the page, so an open WhatsApp chat shows its send preview.
-- **Workspaces:** group accounts (Work, Personal...) and show one group at a time in the side rail.
+- **Workspaces:** group accounts (Work, Personal...) and show one group at a time in the side rail; each stays apart from the others, and a workspace can have a password that is asked every time it is opened.
 - **Unified inbox:** every notification from every account in one list (bell button); click one to open its account. Kept on this PC only, and you can turn that off.
 - **Memory meter:** see what each account uses, put it to sleep with one click, or set a memory limit so the least recently used accounts sleep automatically.
 - **Do not disturb**, and a **passcode lock per account** (same passcode as the launch lock).

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+- Workspace password now guards opening: a protected workspace asks for its password every time it is opened (also after a restart), and "All" and the quick switcher hide it until then. Its accounts raise no alerts while it is locked.
+
 ## 1.2.0
 - Workspaces stay apart: the quick switcher (Ctrl+K), Ctrl+1..9, the tray menu and the Inbox only show the accounts of the workspace you are in.
 - Workspace password: set one from the workspace menu; leaving a protected workspace (to another one, or moving its accounts out) asks for it. Inside a protected workspace, other workspaces raise no alerts.

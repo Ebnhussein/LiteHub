@@ -84,6 +84,7 @@ class MainForm : Form
         Directory.CreateDirectory(Paths.Icons);
         LoadApps();
         LoadState();
+        if (Cfg.HasWsPass(Cfg.Workspace)) Cfg.Workspace = "";   // start outside a protected workspace: it asks for its password again
         LoadInbox();
 
         top.Dock = DockStyle.Top; top.Height = 48;
@@ -157,8 +158,8 @@ class MainForm : Form
         {
             if (apps.Count > 0)
             {
-                AppDef first = apps.Find(delegate(AppDef x) { return x.Name == lastApp; }) ?? apps[0];
-                ShowApp(first);
+                AppDef first = apps.Find(delegate(AppDef x) { return x.Name == lastApp && InWs(x); }) ?? apps.Find(InWs);
+                if (first != null) ShowApp(first);
                 foreach (AppDef a in apps) if (a.KeepAlive && a != first) warmQueue.Enqueue(a);
                 warm.Start();
             }
@@ -372,7 +373,13 @@ class MainForm : Form
 
     // ---------- workspaces: named groups of accounts (Work, Personal...); the rail shows one at a time ----------
 
-    public bool InWs(AppDef a) { return Cfg.Workspace == "" || a.Workspace == Cfg.Workspace; }
+    readonly HashSet<string> unlockedWs = new HashSet<string>();   // protected workspaces opened with their password, until you leave them
+
+    public bool InWs(AppDef a)
+    {
+        if (Cfg.Workspace != "") return a.Workspace == Cfg.Workspace;
+        return !Cfg.HasWsPass(a.Workspace) || unlockedWs.Contains(a.Workspace);   // "All" never shows a protected workspace that is still locked
+    }
 
     List<string> Workspaces()
     {
@@ -382,11 +389,10 @@ class MainForm : Form
         return l;
     }
 
-    // Leaving a workspace that has a password (switching to another, or moving one of its accounts out) asks for it.
-    bool LeaveOk(string ws)
+    // Opening a workspace that has a password asks for it every time.
+    bool AskWsPass(string ws)
     {
-        if (!Cfg.HasWsPass(ws)) return true;
-        string p = Dialogs.Ask("Workspace", "Enter the password of this workspace to leave it", "", true);
+        string p = Dialogs.Ask("Workspace", "Enter the workspace password", "", true);
         if (p == null) return false;
         if (Cfg.CheckWsPass(ws, p)) return true;
         MessageBox.Show(Loc.T("Wrong password."), "LiteHub");
@@ -398,7 +404,10 @@ class MainForm : Form
 
     public void SetWorkspace(string w)
     {
-        if (w == Cfg.Workspace || !LeaveOk(Cfg.Workspace)) return;
+        if (w == Cfg.Workspace) return;
+        if (Cfg.HasWsPass(w) && !unlockedWs.Contains(w) && !AskWsPass(w)) return;
+        unlockedWs.Remove(Cfg.Workspace);   // leaving a protected workspace locks it again
+        if (Cfg.HasWsPass(w)) unlockedWs.Add(w);
         Cfg.Workspace = w; Cfg.Save();
         if (wsBtn != null) { wsBtn.Text = w == "" ? Loc.T("All") : w; ((RoundButton)toolBtns[4]).Badge = InboxUnread; toolBtns[4].Invalidate(); }
         LayoutIcons();
@@ -431,16 +440,16 @@ class MainForm : Form
                 items.Add(new PaletteItem { Text = Loc.T("Set a password for this workspace...") });
                 acts.Add(delegate
                 {
-                    string p1 = Dialogs.Ask("Workspace", "New password (needed to leave this workspace)", "", true);
+                    string p1 = Dialogs.Ask("Workspace", "New password (asked each time this workspace is opened)", "", true);
                     if (p1 == null || p1.Length == 0) return;
                     string p2 = Dialogs.Ask("Workspace", "Repeat the password", "", true);
-                    if (p1 == p2) { Cfg.SetWsPass(cur, p1); Cfg.Save(); } else MessageBox.Show(Loc.T("The passwords do not match."), "LiteHub");
+                    if (p1 == p2) { Cfg.SetWsPass(cur, p1); unlockedWs.Add(cur); Cfg.Save(); } else MessageBox.Show(Loc.T("The passwords do not match."), "LiteHub");
                 });
             }
             else
             {
                 items.Add(new PaletteItem { Text = Loc.T("Remove the password of this workspace...") });
-                acts.Add(delegate { if (LeaveOk(cur)) { Cfg.SetWsPass(cur, null); Cfg.Save(); } });
+                acts.Add(delegate { if (AskWsPass(cur)) { Cfg.SetWsPass(cur, null); Cfg.Save(); } });
             }
         }
         palette = new PalettePanel(items, delegate(int i) { if (i >= 0) acts[i](); }, "Workspaces");
@@ -449,7 +458,6 @@ class MainForm : Form
 
     void MoveToWorkspace(AppDef a, string w)
     {
-        if (w != a.Workspace && !LeaveOk(a.Workspace)) return;
         a.Workspace = w; SaveApps(); LayoutIcons();
         if (a == active && !InWs(a)) { AppDef f = apps.Find(InWs); if (f != null) ShowApp(f); }
     }
@@ -1738,7 +1746,7 @@ class MainForm : Form
     public void ShowToast(AppDef a, string title, string body)
     {
         if (!Cfg.Notify || !a.Notify || Cfg.DndActive) return;
-        if (Cfg.HasWsPass(Cfg.Workspace) && !InWs(a)) return;   // inside a protected workspace, other workspaces stay silent
+        if (Cfg.HasWsPass(a.Workspace) && !unlockedWs.Contains(a.Workspace)) return;   // a locked workspace shows no alerts (nothing of it leaks)
         if (Cfg.ToastStyle == 1) { balloonApp = a; tray.ShowBalloonTip(4000, a.Name, title.Length == 0 ? body : title + ": " + body, ToolTipIcon.Info); return; }
         Toast.Show(a, title, body, delegate { Restore(); ShowApp(a); });
     }
