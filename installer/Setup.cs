@@ -123,7 +123,7 @@ static class Setup
         using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa + @"\shell\open\command")) cmd = k == null ? null : k.GetValue("") as string;
         if (cmd == null || cmd.IndexOf(full, StringComparison.OrdinalIgnoreCase) < 0) return;
         using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa)) prev = k.GetValue("LiteHubPrev") as string;
-        if (prev == null) { Registry.CurrentUser.DeleteSubKeyTree(wa, false); return; }   // nothing was there before us
+        if (prev == null || prev.IndexOf(App, StringComparison.OrdinalIgnoreCase) >= 0) { Registry.CurrentUser.DeleteSubKeyTree(wa, false); return; }   // nothing (or only another LiteHub copy) was there before us
         using (RegistryKey k = Registry.CurrentUser.OpenSubKey(wa, true))
         {
             using (RegistryKey c = k.CreateSubKey(@"shell\open\command")) c.SetValue("", prev);

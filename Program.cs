@@ -1283,7 +1283,7 @@ class MainForm : Form
                     using (RegistryKey c = k.CreateSubKey(@"shell\open\command"))
                     {
                         string old = c.GetValue("") as string;
-                        if (old != null && old != mine && k.GetValue("LiteHubPrev") == null) k.SetValue("LiteHubPrev", old);   // keep the original so switching off puts it back
+                        if (old != null && old != mine && old.IndexOf("LiteHub", StringComparison.OrdinalIgnoreCase) < 0 && k.GetValue("LiteHubPrev") == null) k.SetValue("LiteHubPrev", old);   // never remember another LiteHub copy as "the original app"   // keep the original so switching off puts it back
                         c.SetValue("", mine);
                     }
                     if (k.GetValue("") == null) k.SetValue("", "URL:WhatsApp");

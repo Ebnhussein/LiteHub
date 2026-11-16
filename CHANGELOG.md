@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.2
+- The WhatsApp link handler never remembers another LiteHub copy as the app to give the link back to; uninstall then simply removes the handler.
+
 ## 1.3.1
 - Start with Windows is re-applied at every start of an installed or portable copy, so it survives an uninstall and reinstall.
 
