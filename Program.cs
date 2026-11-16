@@ -165,6 +165,7 @@ class MainForm : Form
                 warm.Start();
             }
             if (!Cfg.Asked && string.IsNullOrEmpty(Paths.TestData)) { Dialogs.Setup(); ApplyStartup(); }
+            if (Cfg.Startup > 0 && string.IsNullOrEmpty(Paths.TestData) && (Paths.Portable || File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Uninstall.exe")))) ApplyStartup();   // the setting is the truth: restores the entry after a reinstall or a moved folder (not for dev builds)
             if (Cfg.LinkWa) ApplyLinks();   // keeps the handler pointing at this exe if the folder moved
             TakeLink();
             Log.Info("window ready after " + Log.Clock.ElapsedMilliseconds + " ms, " + apps.Count + " accounts");

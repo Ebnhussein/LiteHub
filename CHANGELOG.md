@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.1
+- Start with Windows is re-applied at every start of an installed or portable copy, so it survives an uninstall and reinstall.
+
 ## 1.3.0
 - Arabic now mirrors the whole window (side bar on the right, rows and dialogs right to left).
 - Log lines say when a count-only alert was skipped because the real notification came, or shown because none came.
