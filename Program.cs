@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -135,7 +135,7 @@ class MainForm : Form
         SetupTray();
         showEvt = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, "LiteHub.show" + Paths.Tag);
         System.Threading.ThreadPool.RegisterWaitForSingleObject(showEvt,
-            delegate { if (IsHandleCreated) BeginInvoke(new Action(Restore)); }, null, -1, false);
+            delegate { if (IsHandleCreated) BeginInvoke(new Action(delegate { Restore(); TakeLink(); })); }, null, -1, false);
 
         Timer sweep = new Timer();
         sweep.Interval = 30000;
@@ -161,6 +161,9 @@ class MainForm : Form
                 foreach (AppDef a in apps) if (a.KeepAlive && a != first) warmQueue.Enqueue(a);
                 warm.Start();
             }
+            if (!Cfg.Asked && string.IsNullOrEmpty(Paths.TestData)) { Dialogs.Setup(); ApplyStartup(); }
+            if (Cfg.LinkWa) ApplyLinks();   // keeps the handler pointing at this exe if the folder moved
+            TakeLink();
             Log.Info("window ready after " + Log.Clock.ElapsedMilliseconds + " ms, " + apps.Count + " accounts");
             StartWatchdog();
             FetchMissingIcons();
@@ -328,26 +331,11 @@ class MainForm : Form
         AccountIcon b = new AccountIcon(a);
         b.Click += delegate
         {   // a second click on the open account shows its quick menu (add another account, split, reload...)
-            if (a == active && overlay == null && b.ContextMenuStrip != null) b.ContextMenuStrip.Show(b, new Point(b.Width, 0));
+            if (a == active && overlay == null) AccountMenu(a);
             else ShowApp(a);
         };
+        b.MouseUp += delegate(object s, MouseEventArgs e) { if (e.Button == MouseButtons.Right) AccountMenu(a); };
         tip.SetToolTip(b, a.Name + "  -  " + Loc.T("Drop files here to send"));
-        ContextMenuStrip m = new AutoMenu();
-        ToolStripMenuItem reload = new ToolStripMenuItem(Loc.T("Reload"));
-        reload.Click += delegate { if (a.View != null && a.View.CoreWebView2 != null) a.View.Reload(); };
-        ToolStripMenuItem set = new ToolStripMenuItem(Loc.T("Account settings"));
-        set.Click += delegate { ShowSettings(a.Id); };
-        ToolStripMenuItem remove = new ToolStripMenuItem(Loc.T("Remove"));
-        remove.Click += delegate { RemoveApp(a); };
-        ToolStripMenuItem side = new ToolStripMenuItem(Loc.T("Open side by side"));
-        side.Click += delegate { AddToSplit(a); };
-        ToolStripMenuItem another = new ToolStripMenuItem(Loc.T("Add another account"));
-        another.Click += delegate { AddAnother(a); };
-        ToolStripMenuItem wsm = new ToolStripMenuItem(Loc.T("Workspace"));
-        wsm.DropDownOpening += delegate { FillWorkspaceItems(wsm, a); };
-        wsm.DropDownItems.Add(new ToolStripMenuItem("..."));
-        m.Items.Add(another); m.Items.Add(wsm); m.Items.Add(side); m.Items.Add(reload); m.Items.Add(set); m.Items.Add(remove);
-        b.ContextMenuStrip = m;
         a.Btn = b;
         string png = IconFile(a), bundled = Icons.BundledPath(a.Url);
         if (File.Exists(png)) try { a.Icon = LoadCopy(png); } catch (Exception) { }
@@ -399,18 +387,17 @@ class MainForm : Form
 
     void WorkspaceMenu(Control anchor)
     {
-        ContextMenuStrip m = new AutoMenu();
-        ToolStripMenuItem all = new ToolStripMenuItem(Loc.T("All accounts")); all.Checked = Cfg.Workspace == "";
-        all.Click += delegate { SetWorkspace(""); }; m.Items.Add(all);
+        if (palette != null && !palette.IsDisposed) palette.Close();
+        List<PaletteItem> items = new List<PaletteItem>(); List<Action> acts = new List<Action>();
+        items.Add(new PaletteItem { Text = Loc.T("All accounts"), Hint = Cfg.Workspace == "" ? "\u2713" : "" }); acts.Add(delegate { SetWorkspace(""); });
         foreach (string w in Workspaces())
         {
-            string name = w; ToolStripMenuItem it = new ToolStripMenuItem(w); it.Checked = Cfg.Workspace == w;
-            it.Click += delegate { SetWorkspace(name); }; m.Items.Add(it);
+            string name = w;
+            items.Add(new PaletteItem { Text = w, Hint = Cfg.Workspace == w ? "\u2713" : "" }); acts.Add(delegate { SetWorkspace(name); });
         }
-        m.Items.Add(new ToolStripSeparator());
-        ToolStripMenuItem nw = new ToolStripMenuItem(Loc.T("New workspace..."));
-        nw.Click += delegate { string n = AskWorkspace(); if (n.Length > 0) SetWorkspace(n); }; m.Items.Add(nw);
-        m.Show(anchor, new Point(0, anchor.Height));
+        items.Add(new PaletteItem { Text = Loc.T("New workspace...") }); acts.Add(delegate { string n = AskWorkspace(); if (n.Length > 0) SetWorkspace(n); });
+        palette = new PalettePanel(items, delegate(int i) { if (i >= 0) acts[i](); }, "Workspaces");
+        palette.ShowIn(host);
     }
 
     void MoveToWorkspace(AppDef a, string w)
@@ -419,19 +406,39 @@ class MainForm : Form
         if (a == active && !InWs(a)) { AppDef f = apps.Find(InWs); if (f != null) ShowApp(f); }
     }
 
-    // "Workspace" submenu of an account's right-click menu.
-    void FillWorkspaceItems(ToolStripMenuItem parent, AppDef a)
+    // Every menu in LiteHub is this pop-up: a short list in the middle of the window (type to filter, Enter, Esc).
+    void Pop(string prompt, List<PaletteItem> items, List<Action> acts)
     {
-        parent.DropDownItems.Clear();
-        ToolStripMenuItem none = new ToolStripMenuItem(Loc.T("No workspace")); none.Checked = a.Workspace == "";
-        none.Click += delegate { MoveToWorkspace(a, ""); }; parent.DropDownItems.Add(none);
+        if (palette != null && !palette.IsDisposed) palette.Close();
+        palette = new PalettePanel(items, delegate(int i) { if (i >= 0) acts[i](); }, prompt);
+        palette.ShowIn(host);
+    }
+
+    // The account's menu (click the open account again, or right-click it).
+    void AccountMenu(AppDef a)
+    {
+        List<PaletteItem> items = new List<PaletteItem>(); List<Action> acts = new List<Action>();
+        items.Add(new PaletteItem { Text = Loc.T("Add another account") }); acts.Add(delegate { AddAnother(a); });
+        items.Add(new PaletteItem { Text = Loc.T("Workspace"), Hint = a.Workspace.Length > 0 ? a.Workspace : "›" }); acts.Add(delegate { WorkspacePop(a); });
+        items.Add(new PaletteItem { Text = Loc.T("Open side by side") }); acts.Add(delegate { AddToSplit(a); });
+        items.Add(new PaletteItem { Text = Loc.T("Reload") }); acts.Add(delegate { if (a.View != null && a.View.CoreWebView2 != null) a.View.Reload(); });
+        items.Add(new PaletteItem { Text = Loc.T("Account settings") }); acts.Add(delegate { ShowSettings(a.Id); });
+        items.Add(new PaletteItem { Text = Loc.T("Remove") }); acts.Add(delegate { RemoveApp(a); });
+        Pop(a.Name, items, acts);
+    }
+
+    // Move one account to a workspace.
+    void WorkspacePop(AppDef a)
+    {
+        List<PaletteItem> items = new List<PaletteItem>(); List<Action> acts = new List<Action>();
+        items.Add(new PaletteItem { Text = Loc.T("No workspace"), Hint = a.Workspace == "" ? "✓" : "" }); acts.Add(delegate { MoveToWorkspace(a, ""); });
         foreach (string w in Workspaces())
         {
-            string name = w; ToolStripMenuItem it = new ToolStripMenuItem(w); it.Checked = a.Workspace == w;
-            it.Click += delegate { MoveToWorkspace(a, name); }; parent.DropDownItems.Add(it);
+            string name = w;
+            items.Add(new PaletteItem { Text = w, Hint = a.Workspace == w ? "✓" : "" }); acts.Add(delegate { MoveToWorkspace(a, name); });
         }
-        ToolStripMenuItem nw = new ToolStripMenuItem(Loc.T("New workspace..."));
-        nw.Click += delegate { string n = AskWorkspace(); if (n.Length > 0) MoveToWorkspace(a, n); }; parent.DropDownItems.Add(nw);
+        items.Add(new PaletteItem { Text = Loc.T("New workspace...") }); acts.Add(delegate { string n = AskWorkspace(); if (n.Length > 0) MoveToWorkspace(a, n); });
+        Pop("Workspaces", items, acts);
     }
 
     // ---------- drag and drop: send files to an account ----------
@@ -698,18 +705,16 @@ class MainForm : Form
 
     void SplitMenu(Control anchor)
     {
-        ContextMenuStrip m = new AutoMenu();
+        List<PaletteItem> items = new List<PaletteItem>(); List<Action> acts = new List<Action>();
         string[] names = { "Single view", "2 side by side", "3 columns", "2 x 2 (4 accounts)", "3 x 2 (6 accounts)" };
         int[] counts = { 1, 2, 3, 4, 6 };
         for (int i = 0; i < names.Length; i++)
         {
             int n = counts[i];
-            ToolStripMenuItem it = new ToolStripMenuItem(Loc.T(names[i]));
-            it.Checked = n == 1 ? split.Count == 0 : split.Count == n;
-            it.Click += delegate { SetSplit(n); };
-            m.Items.Add(it);
+            items.Add(new PaletteItem { Text = Loc.T(names[i]), Hint = (n == 1 ? split.Count == 0 : split.Count == n) ? "✓" : "" });
+            acts.Add(delegate { SetSplit(n); });
         }
-        m.Show(anchor, new Point(0, anchor.Height));
+        Pop("Split view", items, acts);
     }
 
     // Resume a hidden account that is about to be shown.
@@ -1173,6 +1178,102 @@ class MainForm : Form
             if (Cfg.Startup == 0) k.DeleteValue("LiteHub", false);
             else k.SetValue("LiteHub", "\"" + Application.ExecutablePath + "\"" + (Cfg.Startup == 2 ? " --background" : ""));
         }
+    }
+
+    // ---- WhatsApp links: whatsapp://send?... from the browser opens in LiteHub (per user, no admin) ----
+    const string WaKey = @"Software\Classes\whatsapp";
+
+    public void ApplyLinks()
+    {
+        try
+        {
+            if (Cfg.LinkWa)
+            {
+                string mine = "\"" + Application.ExecutablePath + "\" --link \"%1\"";
+                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(WaKey))
+                {
+                    using (RegistryKey c = k.CreateSubKey(@"shell\open\command"))
+                    {
+                        string old = c.GetValue("") as string;
+                        if (old != null && old != mine && k.GetValue("LiteHubPrev") == null) k.SetValue("LiteHubPrev", old);   // keep the original so switching off puts it back
+                        c.SetValue("", mine);
+                    }
+                    if (k.GetValue("") == null) k.SetValue("", "URL:WhatsApp");
+                    k.SetValue("URL Protocol", "");
+                }
+                return;
+            }
+            string prev;
+            using (RegistryKey k = Registry.CurrentUser.OpenSubKey(WaKey, true))
+            {
+                if (k == null) return;
+                prev = k.GetValue("LiteHubPrev") as string;
+                if (prev != null) { using (RegistryKey c = k.CreateSubKey(@"shell\open\command")) c.SetValue("", prev); k.DeleteValue("LiteHubPrev"); }
+            }
+            if (prev == null) Registry.CurrentUser.DeleteSubKeyTree(WaKey, false);
+        }
+        catch (Exception ex) { Log.Warn("could not update the WhatsApp link handler: " + ex.Message); }
+    }
+
+    // whatsapp://send?phone=1555&text=hi, wa.me/1555?text=hi and api.whatsapp.com/send?... become one web.whatsapp.com address. Anything else: null.
+    public static string WaUrl(string raw)
+    {
+        Uri u;
+        if (string.IsNullOrEmpty(raw) || !Uri.TryCreate(raw.Trim(), UriKind.Absolute, out u)) return null;
+        bool web = u.Scheme == "https" && (u.Host == "api.whatsapp.com" || u.Host == "web.whatsapp.com") && u.AbsolutePath.StartsWith("/send");
+        bool me = u.Scheme == "https" && u.Host == "wa.me";
+        if (u.Scheme != "whatsapp" && !web && !me) return null;
+        string phone = me ? u.AbsolutePath : "", text = null;
+        foreach (string pair in u.Query.TrimStart('?').Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            int i = pair.IndexOf('=');
+            string k = i < 0 ? pair : pair.Substring(0, i), v = i < 0 ? "" : pair.Substring(i + 1);
+            if (k == "phone") phone = v; else if (k == "text") text = Uri.UnescapeDataString(v.Replace('+', ' '));
+        }
+        StringBuilder digits = new StringBuilder();
+        foreach (char ch in Uri.UnescapeDataString(phone)) if (ch >= '0' && ch <= '9') digits.Append(ch);   // only the number is kept
+        if (digits.Length == 0 && text == null) return "https://web.whatsapp.com/";
+        return "https://web.whatsapp.com/send?phone=" + digits + (text != null ? "&text=" + Uri.EscapeDataString(text) : "");
+    }
+
+    // A second launch (the browser asking for a link) leaves the address in link.txt, then wakes us.
+    void TakeLink()
+    {
+        string f = Path.Combine(Paths.Data, "link.txt");
+        try
+        {
+            if (!File.Exists(f)) return;
+            string raw = File.ReadAllText(f).Trim(); File.Delete(f);
+            HandleLink(raw);
+        }
+        catch (Exception ex) { Log.Warn("link: " + ex.Message); }
+    }
+
+    void HandleLink(string raw)
+    {
+        string url = WaUrl(raw);
+        if (url == null) { Log.Warn("ignored a link that is not a WhatsApp address"); return; }
+        List<AppDef> was = apps.FindAll(delegate(AppDef x) { return HostOf(x.Url).EndsWith("whatsapp.com"); });
+        if (was.Count == 0) { MessageBox.Show(this, Loc.T("Add a WhatsApp account first."), "LiteHub"); return; }
+        AppDef pick = was.Find(delegate(AppDef x) { return x.Id == Cfg.LinkAcct; });
+        if (pick == null && was.Count == 1) pick = was[0];
+        if (pick != null) { OpenLink(pick, url); return; }
+        Restore();
+        if (palette != null && !palette.IsDisposed) palette.Close();
+        List<PaletteItem> items = new List<PaletteItem>();
+        foreach (AppDef x in was) items.Add(new PaletteItem { Text = x.Name, Dot = x.AccentColor, Hint = x.Workspace });
+        palette = new PalettePanel(items, delegate(int i) { if (i >= 0) OpenLink(was[i], url); }, "Open this WhatsApp link with...");
+        palette.ShowIn(host);
+    }
+
+    async void OpenLink(AppDef a, string url)
+    {
+        ShowApp(a);
+        if (active != a) return;   // locked and not unlocked
+        for (int i = 0; i < 60 && (a.View == null || a.View.CoreWebView2 == null || a.View.CoreWebView2.Source == "about:blank"); i++) await Task.Delay(250);
+        if (a.View == null || a.View.CoreWebView2 == null) return;
+        a.View.CoreWebView2.Navigate(url);
+        NLog(Log.Who(a) + ": opened a WhatsApp link");
     }
 
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
@@ -1642,10 +1743,12 @@ class MainForm : Form
     [STAThread]
     static void Main(string[] args)
     {
-        if (Array.IndexOf(args, "--selftest") >= 0) Environment.Exit(Util.SelfTest() ? 0 : 1);
+        int li = Array.IndexOf(args, "--link");
+        string link = li >= 0 && li + 1 < args.Length ? args[li + 1] : null;   // text from a web page: never treated as a switch below
+        if (li < 0 && Array.IndexOf(args, "--selftest") >= 0) Environment.Exit(Util.SelfTest() ? 0 : 1);
         ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;   // TLS 1.2 on older .NET
         SetProcessDPIAware();
-        if (Array.IndexOf(args, "--fetch-icons") >= 0) Environment.Exit(FetchIconsCli(args));
+        if (li < 0 && Array.IndexOf(args, "--fetch-icons") >= 0) Environment.Exit(FetchIconsCli(args));
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         bool warned = false;
         Application.ThreadException += delegate(object s, System.Threading.ThreadExceptionEventArgs e)
@@ -1663,10 +1766,12 @@ class MainForm : Form
         {
             if (!first)
             {   // already running (maybe hidden in the tray): ask it to show itself
+                if (link != null) try { Directory.CreateDirectory(Paths.Data); File.WriteAllText(Path.Combine(Paths.Data, "link.txt"), link); } catch (Exception) { }
                 try { System.Threading.EventWaitHandle.OpenExisting("LiteHub.show" + Paths.Tag).Set(); } catch (Exception) { }
                 return;
             }
             Directory.CreateDirectory(Paths.Data);
+            if (link != null) try { File.WriteAllText(Path.Combine(Paths.Data, "link.txt"), link); } catch (Exception) { }
             Cfg.Load(); Loc.Set(Cfg.Lang);
             Log.Startup();
             Pal.Update();

@@ -165,7 +165,18 @@ class SettingsPanel : Panel
         Add(Ui.Row(w, "Startup", "Launch LiteHub with Windows so notifications keep working",
             Ui.Combo(new string[] { "Disabled", "Enabled", "Enabled, hidden in tray" }, Cfg.Startup, 170,
                 delegate(object s, EventArgs e) { Cfg.Startup = ((ComboBox)s).SelectedIndex; Cfg.Save(); m.ApplyStartup(); })));
-        Add(Ui.Row(w, "Close button", "Keep LiteHub running in the tray when you close the window",
+        List<AppDef> was = m.Apps.FindAll(delegate(AppDef x) { return x.Url.IndexOf("whatsapp.com", StringComparison.OrdinalIgnoreCase) >= 0; });
+        Add(Ui.Row(w, "WhatsApp links", "Open WhatsApp links from your browser in LiteHub instead of the WhatsApp app",
+            Ui.Switch(Cfg.LinkWa, delegate(object s, EventArgs e) { Cfg.LinkWa = ((Toggle)s).Checked; Cfg.Save(); m.ApplyLinks(); })));
+        if (Cfg.LinkWa && was.Count > 0)
+        {
+            List<string> names = new List<string>(); names.Add("Ask each time");
+            foreach (AppDef x in was) names.Add(x.Name);
+            Add(Ui.Row(w, "Open them in", "The WhatsApp account that receives those links",
+                Ui.Combo(names.ToArray(), Math.Max(0, was.FindIndex(delegate(AppDef x) { return x.Id == Cfg.LinkAcct; }) + 1), 190,
+                    delegate(object s, EventArgs e) { int k = ((ComboBox)s).SelectedIndex; Cfg.LinkAcct = k == 0 ? "" : was[k - 1].Id; Cfg.Save(); })));
+        }
+        Add(Ui.Row(w, "Close button","Keep LiteHub running in the tray when you close the window",
             Ui.Switch(Cfg.CloseToTray, delegate(object s, EventArgs e) { Cfg.CloseToTray = ((Toggle)s).Checked; Cfg.Save(); })));
         Add(Ui.Row(w, "Keyboard shortcut", "Quickly open or hide LiteHub from anywhere",
             Ui.Switch(Cfg.HotkeyOn, delegate(object s, EventArgs e) { Cfg.HotkeyOn = ((Toggle)s).Checked; Cfg.Save(); m.RegisterHotkey(); })));

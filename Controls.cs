@@ -368,6 +368,23 @@ static class Dialogs
         }
     }
 
+    // First start: ask once for the things LiteHub needs to be useful. Everything can be changed later in Settings > General.
+    public static void Setup()
+    {
+        using (Form f = Make("Welcome to LiteHub", 440, 250))
+        {
+            Label l = new Label(); l.Text = Loc.T("Choose what LiteHub may do. You can change this any time in Settings."); l.SetBounds(14, 12, 410, 40);
+            CheckBox boot = new CheckBox(); boot.Text = Loc.T("Start with Windows, so notifications keep working"); boot.Checked = true; boot.SetBounds(14, 62, 410, 24);
+            CheckBox wa = new CheckBox(); wa.Text = Loc.T("Open WhatsApp links from my browser in LiteHub"); wa.Checked = true; wa.SetBounds(14, 94, 410, 24);
+            CheckBox nt = new CheckBox(); nt.Text = Loc.T("Show notifications for new messages"); nt.Checked = true; nt.SetBounds(14, 126, 410, 24);
+            Button ok = Ui.Btn("OK", 80, null); ok.DialogResult = DialogResult.OK; ok.Location = new Point(344, 176);
+            f.Controls.AddRange(new Control[] { l, boot, wa, nt, ok });
+            f.AcceptButton = ok;
+            f.ShowDialog();
+            Cfg.Startup = boot.Checked ? 2 : 0; Cfg.LinkWa = wa.Checked; Cfg.Notify = nt.Checked; Cfg.Asked = true; Cfg.Save();
+        }
+    }
+
     // Press the keys you want; returns e.g. "Ctrl+Alt+M" or null.
     public static string RecordHotkey()
     {
@@ -672,12 +689,12 @@ class PalettePanel : GlassPanel
     readonly ListBox l = new ListBox();
     bool armed;
 
-    public PalettePanel(System.Collections.Generic.List<PaletteItem> items, Action<int> pick)
+    public PalettePanel(System.Collections.Generic.List<PaletteItem> items, Action<int> pick, string prompt = "Search accounts and actions")
     {
         this.items = items; this.pick = pick;
-        Radius = Ds.ROverlay; BackColor = Pal.Card; Size = new Size(520, 392);
+        Radius = Ds.ROverlay; BackColor = Pal.Card; Size = new Size(520, Math.Max(200, Math.Min(392, 102 + items.Count * 40)));   // short lists get a short pop-up
         t.BorderStyle = BorderStyle.None; t.Font = new Font("Segoe UI", 13f); t.BackColor = Pal.Card; t.ForeColor = Pal.Text;
-        t.SetBounds(50, 20, Width - 76, 28); Ui.Cue(t, "Search accounts and actions");
+        t.SetBounds(50, 20, Width - 76, 28); Ui.Cue(t, prompt);
         l.BorderStyle = BorderStyle.None; l.BackColor = Pal.Card; l.ForeColor = Pal.Text; l.IntegralHeight = false;
         l.DrawMode = DrawMode.OwnerDrawFixed; l.ItemHeight = 40; l.SetBounds(10, 64, Width - 20, Height - 64 - 38);
         Controls.Add(l); Controls.Add(t);
